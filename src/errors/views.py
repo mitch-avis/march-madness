@@ -46,5 +46,5 @@ def handle_exception(error: Exception):
             "message": str(error),
             "success": False,
         }
-    log.debug(str(response))
+    log.exception(str(response))
     return jsonify(response), status_code
