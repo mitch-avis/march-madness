@@ -6,7 +6,6 @@ from src.config.env_config import Config
 
 
 class AppTestCase(unittest.TestCase):
-    # pylint: disable=C0103,R0904
     """This class represents the app test case"""
 
     def setUp(self):

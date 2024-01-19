@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
 from werkzeug.exceptions import HTTPException
 
-from src import log  # pylint: disable=R0401
+from src import log
 
 errors_bp = Blueprint("errors", __name__)
 

@@ -31,7 +31,6 @@ def create_app(config_class=Config):
 
 
 def _add_blueprints(app: Flask):
-    # pylint: disable=C0415
     """Registers Flask Blueprints."""
     from src.api.views import api_bp
     from src.errors.views import errors_bp

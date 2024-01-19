@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 
-from src import log  # pylint: disable=R0401
+from src import log
 from src.errors.views import APIError
 
 BAD_REQUEST = ["Bad Request", 400]
