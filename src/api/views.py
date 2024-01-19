@@ -1,12 +1,14 @@
 from flask import Blueprint, jsonify
 
 from src import log
+from src.config.env_config import Config
 from src.errors.views import APIError
+from src.utils.utils import scrape_stats
 
+CURRENT_YEAR = Config.CURRENT_YEAR
 BAD_REQUEST = ["Bad Request", 400]
 NOT_FOUND = ["Not Found", 404]
 UNPROCESSABLE_CONTENT = ["Unprocessable Content", 422]
-
 
 api_bp = Blueprint("api", __name__)
 
@@ -33,8 +35,9 @@ def home():
     )
 
 
+@api_bp.route("/test", defaults={"test_value": None})
 @api_bp.route("/test/<test_value>", methods=["GET"])
-def get_test(test_value=None):
+def get_test(test_value):
     log.debug("testing")
     if test_value is None:
         value = None
@@ -45,6 +48,21 @@ def get_test(test_value=None):
             {
                 "success": True,
                 "test_value": test_value,
+            }
+        ),
+        200,
+    )
+
+
+@api_bp.route("/scrape", defaults={"start_year": CURRENT_YEAR})
+@api_bp.route("/scrape/<start_year>", methods=["GET"])
+def run_scraper(start_year):
+    log.debug("running scraper")
+    scrape_stats(int(start_year))
+    return (
+        jsonify(
+            {
+                "success": True,
             }
         ),
         200,
