@@ -22,7 +22,6 @@ class Definitions:
         "predictive",
         "neutral",
         "schedule-strength",
-        "future-sos",
         "season-sos",
         "sos-basic",
         "last-5-games",
