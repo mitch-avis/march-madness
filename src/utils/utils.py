@@ -1,6 +1,9 @@
 import os
+import time
 
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 
 from src import log
 from src.config.definitions import Definitions
@@ -65,6 +68,52 @@ def scrape_ratings(start_year: int) -> None:
         write_df_to_csv(all_stats, f"TeamRankingsRatings{year}.csv")
 
 
+def scrape_scores(start_year: int) -> None:
+    all_games = []
+    session = requests.Session()
+    with session:
+        for year in range(start_year, CURRENT_YEAR):
+            games = []
+            if year == 2020:
+                continue
+            url = f"https://www.sports-reference.com/cbb/postseason/{year}-ncaa.html"
+            session_request = session.get(url, params={})
+            log.debug("URL: %s", session_request.url)
+            # Parse each round from HTML response
+            parsed_response = BeautifulSoup(session_request.text, "html.parser")
+            brackets_node = parsed_response.find(id="brackets")
+            brackets_children = brackets_node.find_all(True, recursive=False)
+            for bracket_child in brackets_children:
+                bracket_rounds = bracket_child.find_all("div", class_="round")
+                round_num = 1
+                for bracket_round in bracket_rounds:
+                    round_children = bracket_round.find_all(True, recursive=False)
+                    for game_node in round_children:
+                        game = {}
+                        game["year"] = year
+                        game["bracket"] = bracket_child.get("id")
+                        game["round"] = round_num
+                        game_children = game_node.find_all(True, recursive=False)
+                        if len(game_children) < 2:
+                            continue
+                        # Parse each team
+                        game["team_a"] = _parse_team(game_children[0])
+                        game["team_b"] = _parse_team(game_children[1])
+                        game["location"] = None
+                        if len(game_children) == 3:
+                            location_link = game_children[2].contents[0]
+                            game["location"] = location_link.get_text()[len("at ") :]
+                        games.append(game)
+                        all_games.append(game)
+                    round_num += 1
+            games_df = pd.json_normalize(games)
+            log.debug("Scores:\n%s", games_df)
+            write_df_to_csv(games_df, f"Scores{year}.csv")
+            time.sleep(0.5)
+    all_games_df = pd.json_normalize(all_games)
+    write_df_to_csv(all_games_df, "AllScores.csv")
+
+
 def read_write_data(data_name: str, func, *args, **kwargs) -> pd.DataFrame:
     dataframe = pd.DataFrame()
     # Get dataframe from CSV if it exists
@@ -88,3 +137,15 @@ def read_df_from_csv(file_name: str) -> pd.DataFrame:
 def write_df_to_csv(dataframe: pd.DataFrame, file_name: str) -> pd.DataFrame:
     log.debug("Attempting to write to %s/%s", DATA_PATH, file_name)
     dataframe.to_csv(f"{DATA_PATH}/{file_name}", index=False)
+
+
+def _parse_team(team_node):
+    team = {}
+    classes = team_node.get("class")
+    team["won"] = (classes is not None) and ("winner" in team_node.get("class"))
+    team_children = team_node.find_all(True, recursive=False)
+    team["seed"] = team_children[0].get_text()
+    team["name"] = team_children[1].get_text()
+    if len(team_children) == 3:
+        team["score"] = team_children[2].get_text()
+    return team
