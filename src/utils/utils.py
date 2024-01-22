@@ -10,29 +10,59 @@ CURRENT_YEAR = Config.CURRENT_YEAR
 DATA_PATH = Config.DATA_PATH
 SITE_URL_PREFIX = Definitions.TR_CB_STATS_URL
 STAT_NAMES = Definitions.TR_STATS
+RATING_NAMES = Definitions.TR_RATINGS
 END_DATES = Definitions.END_DATES
 
 
-def scrape_stats(start_year: int):
+def scrape_stats(start_year: int) -> None:
     for year in range(start_year, CURRENT_YEAR + 1):
         if year == 2020:
             continue
         all_stats = pd.DataFrame()
         for stat_name in STAT_NAMES:
-            url = f"{SITE_URL_PREFIX}/{stat_name}?date={year}-03-{END_DATES[year]}"
+            url = f"{SITE_URL_PREFIX}/stat/{stat_name}?date={year}-03-{END_DATES[year]}"
             log.debug("Scraping from URL: %s", url)
             page = pd.read_html(url)
             current_stat = page[0]
             current_stat = current_stat.loc[:, ["Team", str(year - 1)]]
             current_stat = current_stat.rename(columns={str(year - 1): stat_name})
+            log.debug("current_stat:\n%s", current_stat)
             if all_stats.empty:
+                log.debug("all_stats is empty")
                 all_stats = current_stat
             else:
+                log.debug("merging with all_stats")
                 all_stats = pd.merge(all_stats, current_stat, on="Team")
-            # log.debug("Dataframe:\n%s", all_stats)
+            log.debug("all_stats:\n%s", all_stats)
             log.debug("Successfully scraped %s", stat_name)
         log.debug("Done scraping stats for %s", year)
         write_df_to_csv(all_stats, f"TeamRankings{year}.csv")
+
+
+def scrape_ratings(start_year: int) -> None:
+    for year in range(start_year, CURRENT_YEAR + 1):
+        if year == 2020:
+            continue
+        all_stats = pd.DataFrame()
+        for stat_name in RATING_NAMES:
+            url = f"{SITE_URL_PREFIX}/ranking/{stat_name}-by-other?date={year}-03-{END_DATES[year]}"
+            log.debug("Scraping from URL: %s", url)
+            page = pd.read_html(url)
+            current_stat = page[0]
+            current_stat = current_stat.loc[:, ["Team", "Rating"]]
+            current_stat = current_stat.rename(columns={"Rating": stat_name})
+            current_stat["Team"] = current_stat["Team"].str.extract(r"(.*?)\s+\(\d+-\d+\)")
+            log.debug("current_stat:\n%s", current_stat)
+            if all_stats.empty:
+                log.debug("all_stats is empty")
+                all_stats = current_stat
+            else:
+                log.debug("merging with all_stats")
+                all_stats = pd.merge(all_stats, current_stat, on="Team")
+            log.debug("all_stats:\n%s", all_stats)
+            log.debug("Successfully scraped %s", stat_name)
+        log.debug("Done scraping stats for %s", year)
+        write_df_to_csv(all_stats, f"TeamRankingsRatings{year}.csv")
 
 
 def read_write_data(data_name: str, func, *args, **kwargs) -> pd.DataFrame:

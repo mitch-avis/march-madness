@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify
 from src import log
 from src.config.env_config import Config
 from src.errors.views import APIError
-from src.utils.utils import scrape_stats
+from src.utils.utils import scrape_ratings, scrape_stats
 
 CURRENT_YEAR = Config.CURRENT_YEAR
 BAD_REQUEST = ["Bad Request", 400]
@@ -54,11 +54,26 @@ def get_test(test_value):
     )
 
 
-@api_bp.route("/scrape", defaults={"start_year": CURRENT_YEAR})
-@api_bp.route("/scrape/<start_year>", methods=["GET"])
-def run_scraper(start_year):
+@api_bp.route("/scrape_stats", defaults={"start_year": CURRENT_YEAR})
+@api_bp.route("/scrape_stats/<start_year>", methods=["GET"])
+def run_scrape_stats(start_year):
     log.debug("running scraper")
     scrape_stats(int(start_year))
+    return (
+        jsonify(
+            {
+                "success": True,
+            }
+        ),
+        200,
+    )
+
+
+@api_bp.route("/scrape_ratings", defaults={"start_year": CURRENT_YEAR})
+@api_bp.route("/scrape_ratings/<start_year>", methods=["GET"])
+def run_scrape_ratings(start_year):
+    log.debug("running scraper")
+    scrape_ratings(int(start_year))
     return (
         jsonify(
             {

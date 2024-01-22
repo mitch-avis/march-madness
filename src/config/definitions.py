@@ -1,5 +1,5 @@
 class Definitions:
-    TR_CB_STATS_URL = "https://www.teamrankings.com/ncaa-basketball/stat"
+    TR_CB_STATS_URL = "https://www.teamrankings.com/ncaa-basketball"
     END_DATES = {
         2008: 20,
         2009: 19,
@@ -18,6 +18,18 @@ class Definitions:
         2023: 16,
         2024: 21,
     }
+    TR_RATINGS = [
+        "predictive",
+        "neutral",
+        "schedule-strength",
+        "future-sos",
+        "season-sos",
+        "sos-basic",
+        "last-5-games",
+        "last-10-games",
+        "luck",
+        "consistency",
+    ]
     TR_STATS = [
         "points-per-game",
         "average-scoring-margin",
