@@ -54,8 +54,8 @@ def get_test(test_value):
     )
 
 
-@api_bp.route("/scrape_stats", defaults={"start_year": CURRENT_YEAR})
-@api_bp.route("/scrape_stats/<start_year>", methods=["GET"])
+@api_bp.route("/scrape/stats", defaults={"start_year": CURRENT_YEAR})
+@api_bp.route("/scrape/stats/<start_year>", methods=["GET"])
 def run_scrape_stats(start_year):
     log.debug("running scraper")
     scrape_stats(int(start_year))
@@ -69,8 +69,8 @@ def run_scrape_stats(start_year):
     )
 
 
-@api_bp.route("/scrape_ratings", defaults={"start_year": CURRENT_YEAR})
-@api_bp.route("/scrape_ratings/<start_year>", methods=["GET"])
+@api_bp.route("/scrape/ratings", defaults={"start_year": CURRENT_YEAR})
+@api_bp.route("/scrape/ratings/<start_year>", methods=["GET"])
 def run_scrape_ratings(start_year):
     log.debug("running scraper")
     scrape_ratings(int(start_year))
@@ -84,8 +84,8 @@ def run_scrape_ratings(start_year):
     )
 
 
-@api_bp.route("/scrape_scores", defaults={"start_year": CURRENT_YEAR})
-@api_bp.route("/scrape_scores/<start_year>", methods=["GET"])
+@api_bp.route("/scrape/scores", defaults={"start_year": CURRENT_YEAR})
+@api_bp.route("/scrape/scores/<start_year>", methods=["GET"])
 def run_scrape_scores(start_year):
     log.debug("running scraper")
     scrape_scores(int(start_year))
