@@ -72,7 +72,7 @@ def scrape_scores(start_year: int) -> None:
     all_games = []
     session = requests.Session()
     with session:
-        for year in range(start_year, CURRENT_YEAR):
+        for year in range(start_year, CURRENT_YEAR + 1):
             games = []
             if year == 2020:
                 continue
@@ -94,13 +94,14 @@ def scrape_scores(start_year: int) -> None:
                         game["bracket"] = bracket_child.get("id")
                         game["round"] = round_num
                         game_children = game_node.find_all(True, recursive=False)
-                        if len(game_children) < 2:
-                            continue
+                        log.debug("len(game_children) = %s", len(game_children))
+                        if len(game_children) >= 1:
+                            game["team_a"] = _parse_team(game_children[0])
                         # Parse each team
-                        game["team_a"] = _parse_team(game_children[0])
-                        game["team_b"] = _parse_team(game_children[1])
+                        if len(game_children) >= 2:
+                            game["team_b"] = _parse_team(game_children[1])
                         game["location"] = None
-                        if len(game_children) == 3:
+                        if len(game_children) >= 3:
                             location_link = game_children[2].contents[0]
                             game["location"] = location_link.get_text()[len("at ") :]
                         games.append(game)
@@ -137,6 +138,7 @@ def read_df_from_csv(file_name: str) -> pd.DataFrame:
 def write_df_to_csv(dataframe: pd.DataFrame, file_name: str) -> pd.DataFrame:
     log.debug("Attempting to write to %s/%s", DATA_PATH, file_name)
     dataframe.to_csv(f"{DATA_PATH}/{file_name}", index=False)
+    log.debug("Successfully wrote to %s/%s!", DATA_PATH, file_name)
 
 
 def _parse_team(team_node):
@@ -144,8 +146,10 @@ def _parse_team(team_node):
     classes = team_node.get("class")
     team["won"] = (classes is not None) and ("winner" in team_node.get("class"))
     team_children = team_node.find_all(True, recursive=False)
-    team["seed"] = team_children[0].get_text()
-    team["name"] = team_children[1].get_text()
-    if len(team_children) == 3:
+    if len(team_children) >= 1:
+        team["seed"] = team_children[0].get_text()
+    if len(team_children) >= 2:
+        team["name"] = team_children[1].get_text()
+    if len(team_children) >= 3:
         team["score"] = team_children[2].get_text()
     return team

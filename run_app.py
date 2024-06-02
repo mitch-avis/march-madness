@@ -2,6 +2,8 @@
 from waitress import serve
 
 from src import create_app, log
+
+# from src.api.views import run_scrape_all
 from src.config.env_config import Config
 
 
@@ -21,3 +23,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # run_scrape_all(2024)

@@ -24,6 +24,7 @@ def after_request(response):
 def home():
     """Home endpoint."""
     greeting = "Welcome!"
+    log.debug("%s", greeting)
     return (
         jsonify(
             {
@@ -38,7 +39,7 @@ def home():
 @api_bp.route("/test", defaults={"test_value": None})
 @api_bp.route("/test/<test_value>", methods=["GET"])
 def get_test(test_value):
-    log.debug("testing")
+    log.debug("Testing...")
     if test_value is None:
         value = None
         message = "No test_value found."
@@ -54,10 +55,26 @@ def get_test(test_value):
     )
 
 
+@api_bp.route("/scrape/all", defaults={"start_year": CURRENT_YEAR})
+@api_bp.route("/scrape/all/<start_year>", methods=["GET"])
+def run_scrape_all(start_year):
+    log.debug("Running scraper:all...")
+    scrape_ratings(int(start_year))
+    scrape_stats(int(start_year))
+    return (
+        jsonify(
+            {
+                "success": True,
+            }
+        ),
+        200,
+    )
+
+
 @api_bp.route("/scrape/stats", defaults={"start_year": CURRENT_YEAR})
 @api_bp.route("/scrape/stats/<start_year>", methods=["GET"])
 def run_scrape_stats(start_year):
-    log.debug("running scraper")
+    log.debug("Running scraper:stats...")
     scrape_stats(int(start_year))
     return (
         jsonify(
@@ -72,7 +89,7 @@ def run_scrape_stats(start_year):
 @api_bp.route("/scrape/ratings", defaults={"start_year": CURRENT_YEAR})
 @api_bp.route("/scrape/ratings/<start_year>", methods=["GET"])
 def run_scrape_ratings(start_year):
-    log.debug("running scraper")
+    log.debug("Running scraper:ratings...")
     scrape_ratings(int(start_year))
     return (
         jsonify(
@@ -87,7 +104,7 @@ def run_scrape_ratings(start_year):
 @api_bp.route("/scrape/scores", defaults={"start_year": CURRENT_YEAR})
 @api_bp.route("/scrape/scores/<start_year>", methods=["GET"])
 def run_scrape_scores(start_year):
-    log.debug("running scraper")
+    log.debug("Running scraper:scores...")
     scrape_scores(int(start_year))
     return (
         jsonify(
