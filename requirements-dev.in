@@ -1,0 +1,11 @@
+# Enable pre-release versions
+--pre
+
+# Python packages with version constraints
+black>=25.1.0
+flake8>=7.1.2
+isort>=6.0.1
+pylint>=3.3.5
+pytest>=8.3.5
+pytest-cov>=6.0.0
+pytest-django>=4.10.0
