@@ -1,0 +1,255 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <title>March Madness Scraper</title>
+        <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    </head>
+
+    <body>
+        <header>
+            <h1>March Madness Scraper</h1>
+            <p>Your tool for scraping college basketball stats, scores, ratings and more.</p>
+        </header>
+
+        <nav>
+            <ul class="nav-list">
+                <li><a href="javascript:void(0)" data-health-url="{% url 'core:health' %}"
+                        onclick="checkHealth(this.getAttribute('data-health-url'))">Health
+                        Status</a></li>
+                <li><a href="javascript:void(0)" onclick="startScraping('all', 2025)">Scrape All
+                        Data (from 2025)</a></li>
+                <li><a href="javascript:void(0)" onclick="startScraping('stats', 2025)">Scrape Stats
+                        (from 2025)</a></li>
+                <li><a href="javascript:void(0)" onclick="startScraping('ratings', 2025)">Scrape
+                        Ratings (from 2025)</a></li>
+                <li><a href="javascript:void(0)" onclick="startScraping('scores', 2025)">Scrape
+                        Scores (from 2025)</a></li>
+            </ul>
+        </nav>
+
+        <div class="task-container">
+            <div class="task-actions">
+                <h2>Background Tasks</h2>
+                <button class="refresh-button" onclick="loadRecentTasks()">Refresh Tasks</button>
+            </div>
+            <div id="tasks-list" class="task-list">
+                <div class="task-item">No tasks found. Start a scraping operation to see tasks.
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2025 March Madness Scraper</p>
+        </footer>
+
+        <script>
+            // Track active polling intervals
+            const activePolling = {};
+
+            // Start a scraping operation
+            function startScraping(type, year) {
+                fetch(`/scraper/${type}/${year}/`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            console.log(`Started ${type} scraping. Task ID: ${data.task_id}`);
+                            loadRecentTasks();
+                            startPollingTask(data.task_id);
+                        } else {
+                            alert(`Error starting scraping: ${data.error}`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error starting scraping:', error);
+                        alert(`Error starting scraping: ${error.message || error}`);
+                    });
+            }
+
+            // Load recent tasks
+            function loadRecentTasks() {
+                fetch('/scraper/tasks/')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            updateTasksList(data.tasks);
+
+                            // Start polling for any running tasks
+                            data.tasks.forEach(task => {
+                                if (task.status === 'running' && !activePolling[task.id]) {
+                                    startPollingTask(task.id);
+                                }
+                            });
+                        } else {
+                            console.error('Error loading tasks:', data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading tasks:', error);
+                    });
+            }
+
+            // Start polling for a specific task status
+            function startPollingTask(taskId) {
+                if (activePolling[taskId]) {
+                    return; // Already polling this task
+                }
+
+                activePolling[taskId] = setInterval(() => {
+                    fetch(`/scraper/tasks/${taskId}/`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! Status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                updateTaskStatus(data.task);
+
+                                // If task is complete, stop polling
+                                if (data.task.status === 'success' || data.task.status === 'failure') {
+                                    stopPollingTask(taskId);
+                                }
+                            } else {
+                                console.error('Error polling task:', data.error);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error polling task:', error);
+                            stopPollingTask(taskId);
+                        });
+                }, 2000); // Poll every 2 seconds
+            }
+
+            // Stop polling for a specific task
+            function stopPollingTask(taskId) {
+                if (activePolling[taskId]) {
+                    clearInterval(activePolling[taskId]);
+                    delete activePolling[taskId];
+                }
+            }
+
+            // Update task status in the UI
+            function updateTaskStatus(task) {
+                const taskElement = document.getElementById(`task-${task.id}`);
+                if (taskElement) {
+                    const statusElement = taskElement.querySelector('.task-status');
+                    const progressBar = taskElement.querySelector('.progress-bar');
+
+                    statusElement.textContent = task.status.toUpperCase();
+                    statusElement.className = `task-status status-${task.status}`;
+
+                    progressBar.style.width = `${task.progress}%`;
+                }
+            }
+
+            // Update the tasks list in the UI
+            function updateTasksList(tasks) {
+                const tasksListElement = document.getElementById('tasks-list');
+
+                if (tasks.length === 0) {
+                    tasksListElement.innerHTML = `
+                        <div class="task-item">No tasks found. Start a scraping operation to see tasks.</div>
+                    `;
+                    return;
+                }
+
+                tasksListElement.innerHTML = '';
+
+                tasks.forEach(task => {
+                    const taskElement = document.createElement('div');
+                    taskElement.className = 'task-item';
+                    taskElement.id = `task-${task.id}`;
+
+                    // Format the created date
+                    const createdDate = new Date(task.created_at);
+                    const formattedDate = createdDate.toLocaleString();
+
+                    let errorInfo = '';
+                    if (task.error) {
+                        errorInfo = `<div class="task-error">Error: ${task.error}</div>`;
+                    }
+
+                    taskElement.innerHTML = `
+                        <div class="task-info">
+                            <div><strong>${task.type}</strong> (${formattedDate})</div>
+                            <div>Parameters: Year ${task.params.start_year || 'N/A'}</div>
+                            ${errorInfo}
+                            <div class="progress-container">
+                                <div class="progress-bar" style="width: ${task.progress}%"></div>
+                            </div>
+                        </div>
+                        <span class="task-status status-${task.status}">${task.status.toUpperCase()}</span>
+                    `;
+
+                    tasksListElement.appendChild(taskElement);
+                });
+            }
+
+            // Initialize by loading recent tasks
+            document.addEventListener('DOMContentLoaded', () => {
+                loadRecentTasks();
+
+                // Periodically refresh all tasks
+                setInterval(loadRecentTasks, 10000); // Refresh every 10 seconds
+            });
+
+            // Check system health and display popup
+            function checkHealth(url) {
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        showHealthPopup(data.status === 'ok', data.version);
+                    })
+                    .catch(error => {
+                        console.error('Error checking health:', error);
+                        showHealthPopup(false);
+                    });
+            }
+
+            // Display health status popup
+            function showHealthPopup(isHealthy, version) {
+                // Create popup element
+                const popup = document.createElement('div');
+                popup.className = 'health-popup ' + (isHealthy ? 'health-ok' : 'health-error');
+
+                popup.innerHTML = `
+            <div class="health-popup-content">
+                <span class="health-popup-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                <h3>System Health</h3>
+                <p>${isHealthy ? 'The system is healthy and operational.' : 'System health check failed.'}</p>
+                ${version ? `<p>Version: ${version}</p>` : ''}
+            </div>
+        `;
+
+                document.body.appendChild(popup);
+
+                // Auto-close after 5 seconds
+                setTimeout(() => {
+                    if (popup.parentElement) {
+                        popup.remove();
+                    }
+                }, 5000);
+            }
+        </script>
+    </body>
+
+</html>
