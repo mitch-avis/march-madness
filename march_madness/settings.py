@@ -1,6 +1,4 @@
-"""
-Django settings for march_madness project.
-"""
+"""Django settings for march_madness project."""
 
 import os
 from datetime import datetime
@@ -110,12 +108,12 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "DEBUG",
+            "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
         "file": {
-            "level": "DEBUG",
+            "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": os.path.join(BASE_DIR, "debug.log"),
             "maxBytes": 1024 * 1024 * 5,  # 5 MB
@@ -126,22 +124,32 @@ LOGGING = {
     "loggers": {
         "": {
             "handlers": ["console", "file"],
-            "level": "DEBUG",
+            "level": "INFO",
             "propagate": True,
         },
-        "django": {
+        "core": {
             "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": False,
         },
-        "core": {
+        "march_madness": {
             "handlers": ["console", "file"],
-            "level": "DEBUG",
+            "level": "INFO",
             "propagate": False,
         },
         "scraper": {
             "handlers": ["console", "file"],
-            "level": "DEBUG",
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "urllib3": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
             "propagate": False,
         },
     },
