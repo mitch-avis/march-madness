@@ -1,8 +1,4 @@
-"""Unit tests for task manager module.
-
-This module tests the task_manager functionality including task creation,
-status tracking, and thread management.
-"""
+"""Unit tests for task manager module."""
 
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch

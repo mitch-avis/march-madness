@@ -3,41 +3,62 @@
 <html lang="en">
 
     <head>
-        <meta charset="UTF-8">
+        <meta charset="UTF-8" />
         <title>March Madness Scraper</title>
-        <link rel="stylesheet" href="{% static 'css/style.css' %}">
-        <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
+        <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+        <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon" />
     </head>
 
     <body>
         <header>
             <h1>March Madness Scraper</h1>
-            <p>Your tool for scraping college basketball stats, scores, ratings and more.</p>
+            <p>
+                Your tool for scraping college basketball stats, ratings, scores, and
+                more.
+            </p>
         </header>
 
         <nav>
             <ul class="nav-list">
-                <li><a href="javascript:void(0)" data-health-url="{% url 'core:health' %}"
+                <li>
+                    <a href="javascript:void(0)" data-health-url="{% url 'core:health' %}"
                         onclick="checkHealth(this.getAttribute('data-health-url'))">Health
-                        Status</a></li>
-                <li><a href="javascript:void(0)" onclick="startScraping('all', 2025)">Scrape All
-                        Data (from 2025)</a></li>
-                <li><a href="javascript:void(0)" onclick="startScraping('stats', 2025)">Scrape Stats
-                        (from 2025)</a></li>
-                <li><a href="javascript:void(0)" onclick="startScraping('ratings', 2025)">Scrape
-                        Ratings (from 2025)</a></li>
-                <li><a href="javascript:void(0)" onclick="startScraping('scores', 2025)">Scrape
-                        Scores (from 2025)</a></li>
+                        Status</a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" onclick="promptAndStartScraping('all')">Scrape All
+                        Data</a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" onclick="promptAndStartScraping('trank')">Scrape
+                        T-Rank Ratings</a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" onclick="promptAndStartScraping('stats')">Scrape
+                        Stats
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" onclick="promptAndStartScraping('ratings')">Scrape
+                        Ratings</a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" onclick="promptAndStartScraping('scores')">Scrape
+                        Scores</a>
+                </li>
             </ul>
         </nav>
 
         <div class="task-container">
             <div class="task-actions">
                 <h2>Background Tasks</h2>
-                <button class="refresh-button" onclick="loadRecentTasks()">Refresh Tasks</button>
+                <button class="refresh-button" onclick="loadRecentTasks()">
+                    Refresh Tasks
+                </button>
             </div>
             <div id="tasks-list" class="task-list">
-                <div class="task-item">No tasks found. Start a scraping operation to see tasks.
+                <div class="task-item">
+                    No tasks found. Start a scraping operation to see tasks.
                 </div>
             </div>
         </div>
@@ -48,30 +69,84 @@
 
         <script>
             // Track active polling intervals
-            const activePolling = {};
+            const activePolling = {}
+            const currentYear = new Date().getFullYear() // Get the actual current year
 
-            // Start a scraping operation
-            function startScraping(type, year) {
-                fetch(`/scraper/${type}/${year}/`)
+            // Function to prompt for year and start scraping
+            function promptAndStartScraping(type) {
+                const startYearInput = prompt(
+                    `Enter start year (default: ${currentYear}):`,
+                    currentYear
+                )
+                if (startYearInput === null) {
+                    console.log('Scraping cancelled by user.')
+                    return
+                }
+                const endYearInput = prompt(
+                    `Enter end year (default: ${currentYear}):`,
+                    currentYear
+                )
+                if (endYearInput === null) {
+                    console.log('Scraping cancelled by user.')
+                    return
+                }
+                let startYear =
+                    startYearInput.trim() === ''
+                        ? currentYear
+                        : parseInt(startYearInput, 10)
+                let endYear =
+                    endYearInput.trim() === '' ? currentYear : parseInt(endYearInput, 10)
+
+                if (isNaN(startYear) || isNaN(endYear)) {
+                    alert('Invalid year entered. Please enter numbers.')
+                    return
+                }
+                if (startYear > endYear) {
+                    alert('Start year cannot be after end year.')
+                    return
+                }
+                startScraping(type, startYear, endYear)
+            }
+
+            // Start a scraping operation (API call logic)
+            function startScraping(type, startYear, endYear) {
+                const url = `/scraper/${type}/?start_year=${startYear}&end_year=${endYear}`
+                fetch(url)
                     .then(response => {
                         if (!response.ok) {
-                            throw new Error(`HTTP error! Status: ${response.status}`);
+                            return response
+                                .json()
+                                .then(errData => {
+                                    throw new Error(
+                                        errData.error || `HTTP error! Status: ${response.status}`
+                                    )
+                                })
+                                .catch(() => {
+                                    throw new Error(`HTTP error! Status: ${response.status}`)
+                                })
                         }
-                        return response.json();
+                        return response.json()
                     })
                     .then(data => {
                         if (data.success) {
-                            console.log(`Started ${type} scraping. Task ID: ${data.task_id}`);
-                            loadRecentTasks();
-                            startPollingTask(data.task_id);
+                            console.log(
+                                `Started ${type} scraping for years ${startYear}-${endYear}. Task ID: ${data.task_id}`
+                            )
+                            loadRecentTasks() // Refresh the task list
+                            if (
+                                data.task_id &&
+                                (data.status === 'pending' || data.status === 'running')
+                            ) {
+                                startPollingTask(data.task_id)
+                            }
                         } else {
-                            alert(`Error starting scraping: ${data.error}`);
+                            alert(`Error starting scraping: ${data.error}`)
                         }
                     })
                     .catch(error => {
-                        console.error('Error starting scraping:', error);
-                        alert(`Error starting scraping: ${error.message || error}`);
-                    });
+                        console.error('Error starting scraping:', error)
+                        alert(`Error starting scraping: ${error.message || error}`)
+                    })
             }
 
             // Load recent tasks
@@ -79,176 +154,393 @@
                 fetch('/scraper/tasks/')
                     .then(response => {
                         if (!response.ok) {
-                            throw new Error(`HTTP error! Status: ${response.status}`);
+                            throw new Error(`HTTP error! Status: ${response.status}`)
                         }
-                        return response.json();
+                        return response.json()
                     })
                     .then(data => {
                         if (data.success) {
-                            updateTasksList(data.tasks);
+                            updateTasksList(data.tasks)
 
-                            // Start polling for any running tasks
+                            // Start polling for any running or pending tasks that aren't already being polled
                             data.tasks.forEach(task => {
-                                if (task.status === 'running' && !activePolling[task.id]) {
-                                    startPollingTask(task.id);
+                                if (
+                                    (task.status === 'running' || task.status === 'pending') &&
+                                    !activePolling[task.id]
+                                ) {
+                                    startPollingTask(task.id)
+                                } else if (
+                                    (task.status === 'success' || task.status === 'failure') &&
+                                    activePolling[task.id]
+                                ) {
+                                    // Stop polling completed tasks if somehow missed
+                                    stopPollingTask(task.id)
                                 }
-                            });
+                            })
                         } else {
-                            console.error('Error loading tasks:', data.error);
+                            console.error('Error loading tasks:', data.error)
                         }
                     })
                     .catch(error => {
-                        console.error('Error loading tasks:', error);
-                    });
+                        console.error('Error loading tasks:', error)
+                    })
             }
 
             // Start polling for a specific task status
             function startPollingTask(taskId) {
                 if (activePolling[taskId]) {
-                    return; // Already polling this task
+                    console.log(`Already polling task ${taskId}`)
+                    return // Already polling this task
                 }
+                console.log(`Starting polling for task ${taskId}`)
 
                 activePolling[taskId] = setInterval(() => {
                     fetch(`/scraper/tasks/${taskId}/`)
                         .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! Status: ${response.status}`);
+                            if (response.status === 404) {
+                                console.warn(
+                                    `Task ${taskId} not found during polling. Stopping polling.`
+                                )
+                                stopPollingTask(taskId)
+                                throw new Error('Task not found') // Prevent further processing
                             }
-                            return response.json();
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! Status: ${response.status}`)
+                            }
+                            return response.json()
                         })
                         .then(data => {
                             if (data.success) {
-                                updateTaskStatus(data.task);
+                                updateTaskStatus(data.task)
 
-                                // If task is complete, stop polling
-                                if (data.task.status === 'success' || data.task.status === 'failure') {
-                                    stopPollingTask(taskId);
+                                // If task is complete or failed, stop polling
+                                if (
+                                    data.task.status === 'success' ||
+                                    data.task.status === 'failure'
+                                ) {
+                                    console.log(
+                                        `Task ${taskId} completed with status ${data.task.status}. Stopping polling.`
+                                    )
+                                    stopPollingTask(taskId)
                                 }
                             } else {
-                                console.error('Error polling task:', data.error);
+                                // Handle cases where the API reports success: false for a specific task
+                                console.error(
+                                    `Error polling task ${taskId}: ${data.error}. Stopping polling.`
+                                )
+                                stopPollingTask(taskId) // Stop polling on error
                             }
                         })
                         .catch(error => {
-                            console.error('Error polling task:', error);
-                            stopPollingTask(taskId);
-                        });
-                }, 2000); // Poll every 2 seconds
+                            // Catch fetch errors or errors thrown from response handling
+                            if (error.message !== 'Task not found') {
+                                // Avoid double logging for 404
+                                console.error(`Error polling task ${taskId}:`, error)
+                            }
+                            // Stop polling on any error to prevent repeated failed requests
+                            stopPollingTask(taskId)
+                        })
+                }, 3000) // Poll every 3 seconds
             }
 
             // Stop polling for a specific task
             function stopPollingTask(taskId) {
                 if (activePolling[taskId]) {
-                    clearInterval(activePolling[taskId]);
-                    delete activePolling[taskId];
+                    clearInterval(activePolling[taskId])
+                    delete activePolling[taskId]
+                    console.log(`Stopped polling for task ${taskId}`)
                 }
             }
 
             // Update task status in the UI
             function updateTaskStatus(task) {
-                const taskElement = document.getElementById(`task-${task.id}`);
+                const taskElement = document.getElementById(`task-${task.id}`)
                 if (taskElement) {
-                    const statusElement = taskElement.querySelector('.task-status');
-                    const progressBar = taskElement.querySelector('.progress-bar');
+                    const statusElement = taskElement.querySelector('.task-status')
+                    const progressBar = taskElement.querySelector('.progress-bar')
+                    let errorElement = taskElement.querySelector('.task-error-display') // Target specific div for error
 
-                    statusElement.textContent = task.status.toUpperCase();
-                    statusElement.className = `task-status status-${task.status}`;
+                    // Update status text and class
+                    const currentStatus = statusElement.textContent.toLowerCase()
+                    if (currentStatus !== task.status) {
+                        statusElement.textContent = task.status.toUpperCase()
+                        statusElement.className = `task-status status-${task.status}`
+                    }
 
-                    progressBar.style.width = `${task.progress}%`;
+                    // Update progress bar
+                    progressBar.style.width = `${task.progress}%`
+                    progressBar.textContent = `${task.progress}%`
+
+                    // Display error message ONLY if status is 'failure'
+                    if (task.status === 'failure' && task.error) {
+                        if (!errorElement) {
+                            errorElement = document.createElement('div')
+                            errorElement.className = 'task-error task-error-display'
+                            const progressContainer = taskElement.querySelector(
+                                '.progress-container'
+                            )
+                            if (progressContainer) {
+                                taskElement
+                                    .querySelector('.task-info')
+                                    .insertBefore(errorElement, progressContainer)
+                            }
+                        }
+                        errorElement.textContent = `Error: ${task.error}` // Add "Error:" prefix here
+                    }
+                    // Display cancellation message if status is 'cancelled'
+                    else if (task.status === 'cancelled' && task.error) {
+                        if (!errorElement) {
+                            errorElement = document.createElement('div')
+                            // Use a different class or style if desired, or reuse task-error
+                            errorElement.className =
+                                'task-cancelled-message task-error-display'
+                            const progressContainer = taskElement.querySelector(
+                                '.progress-container'
+                            )
+                            if (progressContainer) {
+                                taskElement
+                                    .querySelector('.task-info')
+                                    .insertBefore(errorElement, progressContainer)
+                            }
+                        }
+                        errorElement.textContent = task.error // Display message directly without "Error:"
+                    }
+                    // Remove the error/cancel display if status is not failure/cancelled or no error message
+                    else if (errorElement) {
+                        errorElement.remove()
+                    } else if (
+                        errorElement &&
+                        task.error &&
+                        errorElement.textContent !== `Error: ${task.error}`
+                    ) {
+                        errorElement.textContent = `Error: ${task.error}` // Update existing error message
+                    }
+
+                    // Update cancel button visibility
+                    const cancelButton = taskElement.querySelector('.cancel-button')
+                    if (cancelButton) {
+                        if (task.status === 'running' || task.status === 'pending') {
+                            cancelButton.style.display = 'inline-block' // Or 'block'
+                        } else {
+                            cancelButton.style.display = 'none'
+                        }
+                    }
+                } else {
+                    // If the task element doesn't exist, refresh the whole list
+                    // This can happen if the task was created after the last full refresh
+                    console.log(`Task element ${task.id} not found, refreshing list.`)
+                    loadRecentTasks()
                 }
             }
 
             // Update the tasks list in the UI
             function updateTasksList(tasks) {
-                const tasksListElement = document.getElementById('tasks-list');
+                const tasksListElement = document.getElementById('tasks-list')
+                const existingTaskIds = new Set(
+                    [...tasksListElement.querySelectorAll('.task-item[id^="task-"]')].map(
+                        el => el.id
+                    )
+                )
 
                 if (tasks.length === 0) {
                     tasksListElement.innerHTML = `
-                        <div class="task-item">No tasks found. Start a scraping operation to see tasks.</div>
-                    `;
-                    return;
+                        <div class="empty-tasks-message">No tasks found. Start a scraping operation to see tasks.</div>
+                    `
+                    return
                 }
 
-                tasksListElement.innerHTML = '';
+                // Use a DocumentFragment for efficiency
+                const fragment = document.createDocumentFragment()
 
                 tasks.forEach(task => {
-                    const taskElement = document.createElement('div');
-                    taskElement.className = 'task-item';
-                    taskElement.id = `task-${task.id}`;
+                    const taskId = `task-${task.id}`
+                    existingTaskIds.delete(taskId) // Mark this task as present
+
+                    let taskElement = document.getElementById(taskId)
 
                     // Format the created date
-                    const createdDate = new Date(task.created_at);
-                    const formattedDate = createdDate.toLocaleString();
+                    const createdDate = new Date(task.created_at)
+                    const formattedDate = createdDate.toLocaleString()
 
-                    let errorInfo = '';
-                    if (task.error) {
-                        errorInfo = `<div class="task-error">Error: ${task.error}</div>`;
+                    let messageInfo = ''
+                    if (task.status === 'failure' && task.error) {
+                        messageInfo = `<div class="task-error task-error-display">Error: ${task.error}</div>`
+                    } else if (task.status === 'cancelled' && task.error) {
+                        // Use a different class or style if desired
+                        messageInfo = `<div class="task-cancelled-message task-error-display">${task.error}</div>`
                     }
 
-                    taskElement.innerHTML = `
+                    let cancelButtonHTML = ''
+                    if (task.status === 'running' || task.status === 'pending') {
+                        // Use data-* attribute for task ID
+                        cancelButtonHTML = `
+                            <button class="cancel-button" data-task-id="${task.id}" onclick="cancelTask(this)">
+                                Cancel
+                            </button>
+                        `
+                    }
+
+                    const taskHTML = `
                         <div class="task-info">
-                            <div><strong>${task.type}</strong> (${formattedDate})</div>
-                            <div>Parameters: Year ${task.params.start_year || 'N/A'}</div>
-                            ${errorInfo}
+                            <div><strong>${task.type
+                        }</strong> (<span class="task-timestamp">${formattedDate}</span>)</div>
+                            <div class="task-parameters">Year(s): ${formatYearRange(
+                            task.params.start_year
+                        )}</div>
+                            ${messageInfo} <!-- Use the generated message -->
                             <div class="progress-container">
-                                <div class="progress-bar" style="width: ${task.progress}%"></div>
+                                <div class="progress-bar" style="width: ${task.progress
+                        }%">${task.progress}%</div>
                             </div>
                         </div>
-                        <span class="task-status status-${task.status}">${task.status.toUpperCase()}</span>
-                    `;
+                        <div class="task-controls">
+                            ${cancelButtonHTML}
+                            <span class="task-status status-${task.status
+                        }">${task.status.toUpperCase()}</span>
+                        </div>
+                    `
 
-                    tasksListElement.appendChild(taskElement);
-                });
+                    if (taskElement) {
+                        // Update existing element if necessary (e.g., if polling missed an update)
+                        // More robust would be to compare innerHTML or specific fields
+                        taskElement.innerHTML = taskHTML
+                    } else {
+                        // Create new element
+                        taskElement = document.createElement('div')
+                        taskElement.className = 'task-item'
+                        taskElement.id = taskId
+                        taskElement.innerHTML = taskHTML
+                        fragment.appendChild(taskElement) // Add to fragment
+                    }
+                })
+
+                // Append new tasks
+                if (fragment.childNodes.length > 0) {
+                    // If the list was previously empty, clear the placeholder message
+                    if (tasksListElement.querySelector('.empty-tasks-message')) {
+                        tasksListElement.innerHTML = ''
+                    }
+                    tasksListElement.appendChild(fragment)
+                }
+
+                // Remove tasks that are no longer in the recent list
+                existingTaskIds.forEach(idToRemove => {
+                    const elementToRemove = document.getElementById(idToRemove)
+                    if (elementToRemove) {
+                        elementToRemove.remove()
+                        stopPollingTask(idToRemove.replace('task-', '')) // Stop polling removed tasks
+                    }
+                })
+
+                // If after removals the list is empty, show the message
+                if (tasksListElement.children.length === 0) {
+                    tasksListElement.innerHTML = `
+                        <div class="empty-tasks-message">No tasks found. Start a scraping operation to see tasks.</div>
+                    `
+                }
+            }
+
+            function cancelTask(buttonElement) {
+                const taskId = buttonElement.getAttribute('data-task-id')
+                if (!taskId) {
+                    console.error('Could not find task ID for cancel button.')
+                    return
+                }
+
+                if (!confirm(`Are you sure you want to cancel task ${taskId}?`)) {
+                    return // User cancelled the confirmation dialog
+                }
+
+                const url = `/scraper/tasks/${taskId}/cancel/`
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        // Add CSRF token header if needed, though csrf_exempt is used
+                        // 'X-CSRFToken': getCookie('csrftoken') // Example function
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message)
+                            // Optionally update the specific task UI immediately or wait for polling
+                            loadRecentTasks() // Refresh list to show updated status
+                        } else {
+                            alert(`Error cancelling task: ${data.error}`)
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error cancelling task:', error)
+                        alert(`Failed to send cancel request: ${error}`)
+                    })
+            }
+
+            function formatYearRange(startYear) {
+                if (!startYear) return 'N/A'
+                if (startYear === currentYear) {
+                    return `${startYear}`
+                } else {
+                    return `${startYear}-${currentYear}`
+                }
             }
 
             // Initialize by loading recent tasks
             document.addEventListener('DOMContentLoaded', () => {
-                loadRecentTasks();
+                loadRecentTasks()
 
-                // Periodically refresh all tasks
-                setInterval(loadRecentTasks, 10000); // Refresh every 10 seconds
-            });
+                // Periodically refresh all tasks less frequently
+                setInterval(loadRecentTasks, 15000) // Refresh every 15 seconds
+            })
 
             // Check system health and display popup
             function checkHealth(url) {
                 fetch(url)
                     .then(response => {
                         if (!response.ok) {
-                            throw new Error(`HTTP error! Status: ${response.status}`);
+                            throw new Error(`HTTP error! Status: ${response.status}`)
                         }
-                        return response.json();
+                        return response.json()
                     })
                     .then(data => {
-                        showHealthPopup(data.status === 'ok', data.version);
+                        showHealthPopup(data.status === 'ok', data.version)
                     })
                     .catch(error => {
-                        console.error('Error checking health:', error);
-                        showHealthPopup(false);
-                    });
+                        console.error('Error checking health:', error)
+                        showHealthPopup(false)
+                    })
             }
 
             // Display health status popup
             function showHealthPopup(isHealthy, version) {
+                // Remove existing popups first
+                document.querySelectorAll('.health-popup').forEach(p => p.remove())
+
                 // Create popup element
-                const popup = document.createElement('div');
-                popup.className = 'health-popup ' + (isHealthy ? 'health-ok' : 'health-error');
+                const popup = document.createElement('div')
+                popup.className =
+                    'health-popup ' + (isHealthy ? 'health-ok' : 'health-error')
 
                 popup.innerHTML = `
             <div class="health-popup-content">
                 <span class="health-popup-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
                 <h3>System Health</h3>
-                <p>${isHealthy ? 'The system is healthy and operational.' : 'System health check failed.'}</p>
+                <p>${isHealthy
+                        ? 'The system is healthy and operational.'
+                        : 'System health check failed.'
+                    }</p>
                 ${version ? `<p>Version: ${version}</p>` : ''}
             </div>
-        `;
+        `
 
-                document.body.appendChild(popup);
+                document.body.appendChild(popup)
 
                 // Auto-close after 5 seconds
                 setTimeout(() => {
-                    if (popup.parentElement) {
-                        popup.remove();
+                    // Check if the popup still exists before trying to remove it
+                    if (popup && popup.parentElement) {
+                        popup.remove()
                     }
-                }, 5000);
+                }, 5000)
             }
         </script>
     </body>

@@ -13,8 +13,10 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-# pylint: disable=duplicate-code
-from .task_manager import (
+from scraper.scores_scraper import scrape_scores
+from scraper.task_manager import (
+    Task,
+    TaskCancelledError,
     TaskNotFoundError,
     cleanup_old_tasks,
     create_task,
@@ -22,65 +24,138 @@ from .task_manager import (
     get_task,
     run_task_in_thread,
 )
-from .utils import DataScrapingError, scrape_ratings, scrape_scores, scrape_stats
+from scraper.tr_scraper import scrape_ratings, scrape_stats
+from scraper.trank_scraper import scrape_trank
+from scraper.utils import DataScrapingError
 
 logger = logging.getLogger(__name__)
 CURRENT_YEAR = settings.CURRENT_YEAR
 
 
-@csrf_exempt  # Add CSRF exemption for API endpoints
-@require_http_methods(["GET"])
-def scrape_all(request, start_year=CURRENT_YEAR):
-    """Scrape all data endpoint.
+def _determine_year_range(
+    request, path_start_year: int | None, path_end_year: int | None
+) -> tuple[int, int]:
+    """Determines the effective start and end years from query or path parameters."""
+    start_year_str = request.GET.get("start_year")
+    end_year_str = request.GET.get("end_year")
+    if start_year_str:
+        start_year = int(start_year_str)
+    elif path_start_year is not None:
+        start_year = int(path_start_year)
+    else:
+        start_year = CURRENT_YEAR
 
-    Starts background tasks to gather team stats and ratings data.
+    if end_year_str:
+        end_year = int(end_year_str)
+    elif path_end_year is not None:
+        end_year = int(path_end_year)
+    else:
+        end_year = CURRENT_YEAR
 
-    Args:
-        _request: Django request object (unused)
-        start_year (int): The year to begin scraping data from
+    if start_year > end_year:
+        raise ValueError("Start year cannot be after end year.")
+    if end_year > CURRENT_YEAR:
+        raise ValueError(f"End year ({end_year}) cannot be after current year ({CURRENT_YEAR}).")
+    return start_year, end_year
 
-    Returns:
-        JsonResponse: Task ID and status information
-    """
+
+def _scrape_single_year(task: Task, year: int, total_operations: int, operations_done: int) -> int:
+    """Performs all scraping operations for a single year and updates progress."""
+    operations = [
+        ("T-Rank", scrape_trank),
+        ("Stats", scrape_stats),
+        ("Ratings", scrape_ratings),
+    ]
+
+    for op_name, scrape_func in operations:
+        if task.cancelled:
+            raise TaskCancelledError(
+                f"Task {task.id} cancelled before scraping {op_name} for {year}."
+            )
+        logger.debug("Task %s: Scraping %s for %d", task.id, op_name, year)
+        scrape_func(year)
+        operations_done += 1
+        current_progress = (operations_done / total_operations) * 100
+        task.update_progress(int(current_progress))
+        logger.debug(
+            "Task %s: Progress after %s(%d): %.2f%%",
+            task.id,
+            op_name,
+            year,
+            current_progress,
+        )
+    return operations_done
+
+
+def _run_all_scraping_task(start_yr: int, end_yr: int, task_id: str):
+    """Background task function to run all scraping operations."""
+    task = None
     try:
-        logger.debug("Starting background task for scraper:all...")
-        # Check if start_year is in query string
-        if "start_year" in request.GET:
-            start_year = request.GET["start_year"]
+        task = get_task(task_id)
+        if not task:
+            logger.error("Task %s not found inside _run_all_scraping_task", task_id)
+            return
 
-        # Try to convert to int (will raise ValueError if invalid)
-        start_year = int(start_year)
+        years_to_process = [y for y in range(start_yr, end_yr + 1) if y != 2020]
+        num_years = len(years_to_process)
+        operations_per_year = 3  # T-Rank, Stats, Ratings
+        total_operations = num_years * operations_per_year
 
-        # Clean up older tasks
+        if total_operations == 0:
+            logger.info(
+                "Task %s: No years to process in the range %d-%d. Task complete.",
+                task_id,
+                start_yr,
+                end_yr,
+            )
+            return
+
+        logger.info(
+            "Task %s: Processing %d years (%d total operations).",
+            task_id,
+            num_years,
+            total_operations,
+        )
+        operations_done = 0
+        for year in years_to_process:
+            if task.cancelled:
+                raise TaskCancelledError(f"Task {task.id} cancelled before processing year {year}.")
+            logger.info("Task %s: Processing year %d...", task_id, year)
+            operations_done = _scrape_single_year(task, year, total_operations, operations_done)
+        logger.info("Task %s: Finished processing all years.", task_id)
+
+    except TaskCancelledError as e:
+        logger.info("Task %s cancelled: %s", task_id, e)
+    except (DataScrapingError, requests.RequestException) as e:
+        logger.exception("Scraping error during background scrape_all task %s", task_id)
+        raise e
+    except TaskNotFoundError:
+        logger.error("Task %s was not found during execution.", task_id)
+    except Exception as e:
+        logger.exception("Unexpected error in background scrape_all task %s", task_id)
+        raise DataScrapingError(f"Unexpected error: {str(e)}") from e
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def scrape_all(request, start_year=None, end_year=None):
+    """Scrape all data endpoint."""
+    try:
+        effective_start_year, effective_end_year = _determine_year_range(
+            request, start_year, end_year
+        )
+        logger.info(
+            "Initiating background task for scraper:all for years %d to %d...",
+            effective_start_year,
+            effective_end_year,
+        )
         cleanup_old_tasks()
-
-        # Create a new task
-        task = create_task("scrape_all", {"start_year": start_year})
-
-        # Run the task in the background
-        def run_all_scraping(year, task_id):
-            """Run all scraping operations"""
-            try:
-                task = get_task(task_id)
-
-                # Update the utility functions to accept task_id parameter
-                scrape_stats(year, task_id)
-                task.update_progress(33)  # 1/3 of the work done
-
-                scrape_ratings(year, task_id)
-                task.update_progress(66)  # 2/3 of the work done
-
-                scrape_scores(year, task_id)
-                # No need to update progress here, as task completion will set it to 100
-            except (DataScrapingError, requests.RequestException) as e:
-                logger.exception("Error in background scrape_all task")
-                raise e
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.exception("Unexpected error in background scrape_all task")
-                raise DataScrapingError(f"Unexpected error: {str(e)}") from e
-
-        run_task_in_thread(run_all_scraping, task, start_year, task.id)
-
+        task = create_task(
+            "scrape_all", {"start_year": effective_start_year, "end_year": effective_end_year}
+        )
+        run_task_in_thread(
+            _run_all_scraping_task, task, effective_start_year, effective_end_year, task.id
+        )
         return JsonResponse(
             {
                 "success": True,
@@ -89,197 +164,193 @@ def scrape_all(request, start_year=CURRENT_YEAR):
                 "status": task.status.value,
             }
         )
+
     except ValueError as e:
-        logger.error("Invalid year format in scrape_all endpoint: %s", str(e))
-        return JsonResponse(
-            {
-                "success": False,
-                "error": f"Invalid year format: {str(e)}",
-            },
-            status=HTTPStatus.BAD_REQUEST,
-        )
-    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.warning("Invalid year range in scrape_all: %s", str(e))
+        return JsonResponse({"success": False, "error": str(e)}, status=HTTPStatus.BAD_REQUEST)
+    except Exception as e:
         logger.exception("Unexpected error in scrape_all endpoint")
         return JsonResponse(
-            {
-                "success": False,
-                "error": f"Server error: {str(e)}",
-            },
+            {"success": False, "error": f"Server error: {str(e)}"},
             status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
 
 
 @csrf_exempt
 @require_http_methods(["GET"])
-def scrape_stats_view(request, start_year=CURRENT_YEAR):
-    """Scrape stats endpoint.
-
-    Starts a background task to scrape team statistics data.
-
-    Args:
-        _request: Django request object (unused)
-        start_year (int): The year to begin scraping stats from
-
-    Returns:
-        JsonResponse: Task ID and status information
-    """
+def scrape_trank_view(request, start_year=None, end_year=None):
+    """Scrape T-Rank data endpoint."""
     try:
-        logger.debug("Starting background task for scraper:stats...")
-        # Check if start_year is in query string
-        if "start_year" in request.GET:
-            start_year = request.GET["start_year"]
-
-        # Try to convert to int (will raise ValueError if invalid)
-        start_year = int(start_year)
-
-        # Clean up older tasks
+        effective_start_year, effective_end_year = _determine_year_range(
+            request, start_year, end_year
+        )
+        logger.info(
+            "Starting background task for scraper:trank for years %d to %d...",
+            effective_start_year,
+            effective_end_year,
+        )
         cleanup_old_tasks()
-
-        # Create a new task
-        task = create_task("scrape_stats", {"start_year": start_year})
-
-        # Run the task in the background
-        run_task_in_thread(scrape_stats, task, start_year, task.id)
-
+        task = create_task(
+            "scrape_trank", {"start_year": effective_start_year, "end_year": effective_end_year}
+        )
+        run_task_in_thread(
+            scrape_trank, task, effective_start_year, effective_end_year, task_id=task.id
+        )
         return JsonResponse(
             {
                 "success": True,
-                "message": "Stats scraping started in the background",
+                "message": "T-Rank data scraping started",
                 "task_id": task.id,
                 "status": task.status.value,
             }
         )
+
     except ValueError as e:
-        logger.error("Invalid year format in scrape_stats endpoint: %s", str(e))
+        logger.warning("Invalid year range in scrape_trank: %s", str(e))
+        return JsonResponse({"success": False, "error": str(e)}, status=HTTPStatus.BAD_REQUEST)
+    except Exception as e:
+        logger.exception("Unexpected error in scrape_trank endpoint")
+        return JsonResponse(
+            {"success": False, "error": f"Server error: {str(e)}"},
+            status=HTTPStatus.INTERNAL_SERVER_ERROR,
+        )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def scrape_stats_view(request, start_year=None, end_year=None):
+    """Scrape stats endpoint."""
+    try:
+        effective_start_year, effective_end_year = _determine_year_range(
+            request, start_year, end_year
+        )
+        logger.info(
+            "Starting background task for scraper:stats for years %d to %d...",
+            effective_start_year,
+            effective_end_year,
+        )
+        cleanup_old_tasks()
+        task = create_task(
+            "scrape_stats", {"start_year": effective_start_year, "end_year": effective_end_year}
+        )
+        run_task_in_thread(
+            scrape_stats, task, effective_start_year, effective_end_year, task_id=task.id
+        )
         return JsonResponse(
             {
-                "success": False,
-                "error": f"Invalid year format: {str(e)}",
-            },
-            status=HTTPStatus.BAD_REQUEST,
+                "success": True,
+                "message": "Stats scraping started",
+                "task_id": task.id,
+                "status": task.status.value,
+            }
         )
-    except Exception as e:  # pylint: disable=broad-exception-caught
+
+    except ValueError as e:
+        logger.warning("Invalid year range in scrape_stats: %s", str(e))
+        return JsonResponse({"success": False, "error": str(e)}, status=HTTPStatus.BAD_REQUEST)
+    except Exception as e:
         logger.exception("Unexpected error in scrape_stats endpoint")
         return JsonResponse(
-            {
-                "success": False,
-                "error": f"Server error: {str(e)}",
-            },
+            {"success": False, "error": f"Server error: {str(e)}"},
             status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
 
 
 @csrf_exempt
 @require_http_methods(["GET"])
-def scrape_ratings_view(request, start_year=CURRENT_YEAR):
-    """Scrape ratings endpoint.
-
-    Starts a background task to scrape team rating data.
-
-    Args:
-        _request: Django request object (unused)
-        start_year (int): The year to begin scraping ratings from
-
-    Returns:
-        JsonResponse: Task ID and status information
-    """
+def scrape_ratings_view(request, start_year=None, end_year=None):
+    """Scrape ratings endpoint."""
     try:
-        logger.debug("Starting background task for scraper:ratings...")
-        # Check if start_year is in query string
-        if "start_year" in request.GET:
-            start_year = request.GET["start_year"]
-
-        # Try to convert to int (will raise ValueError if invalid)
-        start_year = int(start_year)
-
-        # Clean up older tasks
+        effective_start_year, effective_end_year = _determine_year_range(
+            request, start_year, end_year
+        )
+        logger.info(
+            "Starting background task for scraper:ratings for years %d to %d...",
+            effective_start_year,
+            effective_end_year,
+        )
         cleanup_old_tasks()
-
-        # Create a new task
-        task = create_task("scrape_ratings", {"start_year": start_year})
-
-        # Run the task in the background
-        run_task_in_thread(scrape_ratings, task, start_year, task.id)
-
+        task = create_task(
+            "scrape_ratings", {"start_year": effective_start_year, "end_year": effective_end_year}
+        )
+        run_task_in_thread(
+            scrape_ratings, task, effective_start_year, effective_end_year, task_id=task.id
+        )
         return JsonResponse(
             {
                 "success": True,
-                "message": "Ratings scraping started in the background",
+                "message": "Ratings scraping started",
                 "task_id": task.id,
                 "status": task.status.value,
             }
         )
+
     except ValueError as e:
-        logger.error("Invalid year format in scrape_ratings endpoint: %s", str(e))
-        return JsonResponse(
-            {
-                "success": False,
-                "error": f"Invalid year format: {str(e)}",
-            },
-            status=HTTPStatus.BAD_REQUEST,
-        )
-    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.warning("Invalid year range in scrape_ratings: %s", str(e))
+        return JsonResponse({"success": False, "error": str(e)}, status=HTTPStatus.BAD_REQUEST)
+    except Exception as e:
         logger.exception("Unexpected error in scrape_ratings endpoint")
         return JsonResponse(
-            {
-                "success": False,
-                "error": f"Server error: {str(e)}",
-            },
+            {"success": False, "error": f"Server error: {str(e)}"},
             status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
 
 
 @csrf_exempt
 @require_http_methods(["GET"])
-def scrape_scores_view(_request, start_year=CURRENT_YEAR):
-    """Scrape scores endpoint.
-
-    Starts a background task to scrape game scores data.
-
-    Args:
-        _request: Django request object (unused)
-        start_year (int): The year to begin scraping scores from
-
-    Returns:
-        JsonResponse: Task ID and status information
-    """
+def scrape_scores_view(request, start_year=None, end_year=None):
+    """Scrape scores endpoint."""
     try:
-        logger.debug("Starting background task for scraper:scores...")
-        start_year = int(start_year)
-
-        # Clean up older tasks
+        effective_start_year, effective_end_year = _determine_year_range(
+            request, start_year, end_year
+        )
+        logger.info(
+            "Starting background task for scraper:scores for years %d to %d...",
+            effective_start_year,
+            effective_end_year,
+        )
         cleanup_old_tasks()
-
-        # Create a new task
-        task = create_task("scrape_scores", {"start_year": start_year})
-
-        # Run the task in the background
-        run_task_in_thread(scrape_scores, task, start_year, task.id)
-
+        task = create_task(
+            "scrape_scores", {"start_year": effective_start_year, "end_year": effective_end_year}
+        )
+        run_task_in_thread(
+            scrape_scores, task, effective_start_year, effective_end_year, task_id=task.id
+        )
         return JsonResponse(
             {
                 "success": True,
-                "message": "Scores scraping started in the background",
+                "message": "Scores scraping started",
                 "task_id": task.id,
                 "status": task.status.value,
             }
         )
+
     except ValueError as e:
-        logger.error("Invalid year format in scrape_scores endpoint: %s", str(e))
-        return JsonResponse(
-            {
-                "success": False,
-                "error": f"Invalid year format: {str(e)}",
-            },
-            status=HTTPStatus.BAD_REQUEST,
-        )
-    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.warning("Invalid year range in scrape_scores: %s", str(e))
+        return JsonResponse({"success": False, "error": str(e)}, status=HTTPStatus.BAD_REQUEST)
+    except Exception as e:
         logger.exception("Unexpected error in scrape_scores endpoint")
         return JsonResponse(
-            {
-                "success": False,
-                "error": f"Server error: {str(e)}",
-            },
+            {"success": False, "error": f"Server error: {str(e)}"},
+            status=HTTPStatus.INTERNAL_SERVER_ERROR,
+        )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def cancel_task_view(_request, task_id):
+    """Cancel a running or pending task."""
+    try:
+        task = get_task(task_id)
+        task.cancel()
+        return JsonResponse({"success": True, "message": f"Task {task_id} cancellation requested."})
+    except TaskNotFoundError as e:
+        logger.warning("Cancel request for non-existent task %s: %s", task_id, str(e))
+        return JsonResponse({"success": False, "error": str(e)}, status=HTTPStatus.NOT_FOUND)
+    except Exception as e:
+        logger.exception("Error cancelling task %s", task_id)
+        return JsonResponse(
+            {"success": False, "error": f"Server error: {str(e)}"},
             status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
 
@@ -287,33 +358,18 @@ def scrape_scores_view(_request, start_year=CURRENT_YEAR):
 @csrf_exempt
 @require_http_methods(["GET"])
 def task_status(_request, task_id):
-    """Get status of a specific task.
-
-    Args:
-        _request: Django request object (unused)
-        task_id: ID of the task to check
-
-    Returns:
-        JsonResponse: Task status and details
-    """
+    """Get status of a specific task."""
     try:
         task = get_task(task_id)
-        if not task:
-            return JsonResponse(
-                {"success": False, "error": "Task not found"}, status=HTTPStatus.NOT_FOUND
-            )
-
+        logger.debug("Retrieved status for task %s", task_id)
         return JsonResponse({"success": True, "task": task.to_dict()})
     except TaskNotFoundError as e:
-        logger.warning("Task not found: %s", str(e))
+        logger.warning("Task not found request: %s", str(e))
         return JsonResponse({"success": False, "error": str(e)}, status=HTTPStatus.NOT_FOUND)
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except Exception as e:
         logger.exception("Unexpected error in task_status endpoint")
         return JsonResponse(
-            {
-                "success": False,
-                "error": f"Server error: {str(e)}",
-            },
+            {"success": False, "error": f"Server error: {str(e)}"},
             status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
 
@@ -321,23 +377,14 @@ def task_status(_request, task_id):
 @csrf_exempt
 @require_http_methods(["GET"])
 def recent_tasks(_request):
-    """Get list of recent tasks.
-
-    Args:
-        _request: Django request object (unused)
-
-    Returns:
-        JsonResponse: List of recent tasks
-    """
+    """Get list of recent tasks."""
     try:
-        tasks = get_recent_tasks(10)
-        return JsonResponse({"success": True, "tasks": tasks})
-    except Exception as e:  # pylint: disable=broad-exception-caught
+        tasks_list = get_recent_tasks(10)
+        logger.debug("Retrieved %d recent tasks", len(tasks_list))
+        return JsonResponse({"success": True, "tasks": tasks_list})
+    except Exception as e:
         logger.exception("Unexpected error in recent_tasks endpoint")
         return JsonResponse(
-            {
-                "success": False,
-                "error": f"Server error: {str(e)}",
-            },
+            {"success": False, "error": f"Server error: {str(e)}"},
             status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
