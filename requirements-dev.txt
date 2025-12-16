@@ -4,26 +4,26 @@
 #
 #    pip-compile --output-file=requirements-dev.txt --strip-extras requirements-dev.in
 #
-astroid==3.3.9
+astroid==4.0.2
     # via pylint
-black==25.1.0
+black==25.12.0
     # via -r requirements-dev.in
-click==8.1.8
+click==8.3.1
     # via black
 colorama==0.4.6
     # via
     #   click
     #   pylint
     #   pytest
-coverage==7.8.0
+coverage==7.13.0
     # via pytest-cov
-dill==0.3.9
+dill==0.4.0
     # via pylint
-flake8==7.2.0
+flake8==7.3.0
     # via -r requirements-dev.in
-iniconfig==2.1.0
+iniconfig==2.3.0
     # via pytest
-isort==6.0.1
+isort==7.0.0
     # via
     #   -r requirements-dev.in
     #   pylint
@@ -31,34 +31,40 @@ mccabe==0.7.0
     # via
     #   flake8
     #   pylint
-mypy-extensions==1.0.0
+mypy-extensions==1.1.0
     # via black
-packaging==24.2
+packaging==25.0
     # via
     #   black
     #   pytest
 pathspec==0.12.1
     # via black
-platformdirs==4.3.7
+platformdirs==4.5.1
     # via
     #   black
     #   pylint
-pluggy==1.5.0
+pluggy==1.6.0
+    # via
+    #   pytest
+    #   pytest-cov
+pycodestyle==2.14.0
+    # via flake8
+pyflakes==3.4.0
+    # via flake8
+pygments==2.19.2
     # via pytest
-pycodestyle==2.13.0
-    # via flake8
-pyflakes==3.3.2
-    # via flake8
-pylint==3.3.6
+pylint==4.0.4
     # via -r requirements-dev.in
-pytest==8.3.5
+pytest==9.0.2
     # via
     #   -r requirements-dev.in
     #   pytest-cov
     #   pytest-django
-pytest-cov==6.1.1
+pytest-cov==7.0.0
     # via -r requirements-dev.in
 pytest-django==4.11.1
     # via -r requirements-dev.in
-tomlkit==0.13.2
+pytokens==0.3.0
+    # via black
+tomlkit==0.13.3
     # via pylint
