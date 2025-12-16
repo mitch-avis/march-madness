@@ -6,11 +6,11 @@ color 0A
 cd /d %~dp0
 
 :: Check if virtual environment exists and activate it
-if exist venv\Scripts\activate.bat (
+if exist .venv\Scripts\activate.bat (
     echo Activating virtual environment...
-    call venv\Scripts\activate.bat
+    call .venv\Scripts\activate.bat
 ) else (
-    echo WARNING: Virtual environment not found at venv\Scripts\activate.bat
+    echo WARNING: Virtual environment not found at .venv\Scripts\activate.bat
     echo The application may not run correctly if dependencies aren't installed.
     pause
 )
