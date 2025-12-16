@@ -84,7 +84,10 @@ CORS_ALLOW_ALL_ORIGINS = True
 # App-specific settings
 DATA_PATH = os.path.join(BASE_DIR, "data")
 START_YEAR = 2008
-CURRENT_YEAR = datetime.now().year
+_today = datetime.now()
+# College basketball season "year" is the spring tournament year:
+# Nov/Dec => next year's season; otherwise => current year.
+CURRENT_SEASON = _today.year + (1 if _today.month in (11, 12) else 0)
 
 # Create data directory if it doesn't exist
 os.makedirs(DATA_PATH, exist_ok=True)
