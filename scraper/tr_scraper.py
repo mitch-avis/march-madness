@@ -12,7 +12,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from scraper.task_manager import Task, TaskCancelledError, get_task
-from scraper.utils import CURRENT_YEAR, END_DATES, DataScrapingError, write_df_to_csv
+from scraper.utils import CURRENT_SEASON, END_DATES, DataScrapingError, write_df_to_csv
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class ItemContext:
 
 
 def scrape_ratings(
-    start_year: int, end_year: int = CURRENT_YEAR, task_id: Optional[str] = None
+    start_year: int, end_year: int = CURRENT_SEASON, task_id: Optional[str] = None
 ) -> None:
     """Scrape team ratings from given year to current year."""
     ratings_config = ScrapingItemConfig(
@@ -142,7 +142,7 @@ def scrape_ratings(
 
 
 def scrape_stats(
-    start_year: int, end_year: int = CURRENT_YEAR, task_id: Optional[str] = None
+    start_year: int, end_year: int = CURRENT_SEASON, task_id: Optional[str] = None
 ) -> None:
     """Scrape team statistics from given year to current year."""
     stats_config = ScrapingItemConfig(

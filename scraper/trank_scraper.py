@@ -9,7 +9,7 @@ import requests
 
 from scraper.task_manager import TaskCancelledError, get_task
 from scraper.utils import (
-    CURRENT_YEAR,
+    CURRENT_SEASON,
     END_DATES,
     DataScrapingError,
     write_df_to_csv,
@@ -55,7 +55,7 @@ T_RANK_RATING_NAMES = [
 
 
 def scrape_trank(
-    start_year: int, end_year: int = CURRENT_YEAR, task_id: Optional[str] = None
+    start_year: int, end_year: int = CURRENT_SEASON, task_id: Optional[str] = None
 ) -> None:
     """Scrape team T-Rank ratings from given year to current year.
 

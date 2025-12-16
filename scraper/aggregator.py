@@ -118,7 +118,7 @@ if __name__ == "__main__":
         from django.conf import settings
 
         start = settings.START_YEAR
-        end = settings.CURRENT_YEAR
+        end = settings.CURRENT_SEASON
         aggregate_all_years(start, end)
     except Exception as e:
         print(f"Aggregation failed: {e}")

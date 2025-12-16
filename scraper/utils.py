@@ -12,7 +12,7 @@ from urllib3.util.retry import Retry
 logger = logging.getLogger(__name__)
 
 # Constants
-CURRENT_YEAR = settings.CURRENT_YEAR
+CURRENT_SEASON = settings.CURRENT_SEASON
 DATA_PATH = settings.DATA_PATH
 END_DATES = {
     2008: 20,
@@ -32,6 +32,7 @@ END_DATES = {
     2023: 16,
     2024: 21,
     2025: 20,
+    2026: 19,
 }
 REQUEST_TIMEOUT = 15  # seconds
 RETRY_STRATEGY = Retry(

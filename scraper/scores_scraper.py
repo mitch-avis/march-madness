@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 from scraper.task_manager import TaskCancelledError, get_task
 from scraper.utils import (
-    CURRENT_YEAR,
+    CURRENT_SEASON,
     REQUEST_TIMEOUT,
     DataScrapingError,
     create_session,
@@ -23,7 +23,7 @@ SPORTS_REF_URL_BASE = "https://www.sports-reference.com/cbb/postseason/men"
 
 
 def scrape_scores(
-    start_year: int, end_year: int = CURRENT_YEAR, task_id: Optional[str] = None
+    start_year: int, end_year: int = CURRENT_SEASON, task_id: Optional[str] = None
 ) -> None:
     # pylint: disable=too-many-locals
     """Scrape tournament game scores from given year to current year.
