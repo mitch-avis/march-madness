@@ -2,6 +2,7 @@
 
 import logging
 import os
+from datetime import date, timedelta
 
 import pandas as pd
 import requests
@@ -33,6 +34,28 @@ END_DATES = {
     2024: 21,
     2025: 20,
 }
+
+
+def get_end_day(year: int) -> int:
+    """Return the day-of-month in March used for end-of-season snapshots.
+
+    Historically this corresponds to the first-round Thursday date (3rd Thursday
+    of March) for the NCAA tournament. Specific years can be overridden via
+    END_DATES.
+    """
+
+    override = END_DATES.get(year)
+    if override is not None:
+        return override
+
+    march_first = date(year, 3, 1)
+    thursday = 3  # Monday=0
+    days_until_first_thursday = (thursday - march_first.weekday()) % 7
+    first_thursday = march_first + timedelta(days=days_until_first_thursday)
+    third_thursday = first_thursday + timedelta(days=14)
+    return third_thursday.day
+
+
 REQUEST_TIMEOUT = 15  # seconds
 RETRY_STRATEGY = Retry(
     total=3,
