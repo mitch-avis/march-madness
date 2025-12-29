@@ -19,7 +19,7 @@ class ScrapeYearScoresTests(TestCase):
     """Tests for the _scrape_year_scores function"""
 
     @patch("requests.Session")
-    @patch("scraper.utils._parse_bracket_games")
+    @patch("scraper.scores_scraper._parse_bracket_games")
     def test_scrape_year_scores_calls_parse_bracket_games(
         self, mock_parse_bracket_games, _mock_session
     ):
@@ -47,7 +47,7 @@ class ScrapeYearScoresTests(TestCase):
 
         # Act
         with patch(
-            "scraper.utils.BeautifulSoup",
+            "scraper.scores_scraper.BeautifulSoup",
             return_value=BeautifulSoup(mock_response.text, "html.parser"),
         ):
             result = _scrape_year_scores(mock_session_instance, 2023, MOCK_TASK_ID)
@@ -65,7 +65,7 @@ class ScrapeYearScoresTests(TestCase):
 class ParseBracketGamesTests(TestCase):
     """Tests for the _parse_bracket_games function"""
 
-    @patch("scraper.utils._parse_game")
+    @patch("scraper.scores_scraper._parse_game")
     def test_parse_bracket_games_calls_parse_game(self, mock_parse_game):
         """Test that _parse_bracket_games calls _parse_game correctly"""
         # Arrange
@@ -74,12 +74,12 @@ class ParseBracketGamesTests(TestCase):
         # Create a mock bracket with rounds and games
         bracket_html = """
         <div id="east">
-            <div class="round">
-                <div class="game">Game 1</div>
-                <div class="game">Game 2</div>
+            <div class="round1">
+                <div><span>Game 1</span></div>
+                <div><span>Game 2</span></div>
             </div>
-            <div class="round">
-                <div class="game">Game 3</div>
+            <div class="round2">
+                <div><span>Game 3</span></div>
             </div>
         </div>
         """
@@ -123,10 +123,7 @@ class ParseTeamTests(TestCase):
         team = _parse_team(team_node, MOCK_TASK_ID)
 
         # Assert
-        self.assertEqual(team["seed"], "4")
-        self.assertNotIn("name", team)  # Name should not be present
-        self.assertNotIn("score", team)  # Score should not be present
-        self.assertFalse(team["won"])  # Should not be marked as winner
+        self.assertIsNone(team)
 
     def test_parse_team_with_no_children(self):
         """Test _parse_team with no child elements"""
@@ -138,11 +135,7 @@ class ParseTeamTests(TestCase):
         team = _parse_team(team_node, MOCK_TASK_ID)
 
         # Assert
-        self.assertFalse(team["won"])  # Should not be marked as winner
-        # Should not have any of the optional fields
-        self.assertNotIn("seed", team)
-        self.assertNotIn("name", team)
-        self.assertNotIn("score", team)
+        self.assertIsNone(team)
 
 
 class ParseGameTests(TestCase):
@@ -161,10 +154,12 @@ class ParseGameTests(TestCase):
         team = _parse_team(team_node, MOCK_TASK_ID)
 
         # Assert
+        self.assertIsNotNone(team)
+        assert team is not None
         self.assertTrue(team["won"])
-        self.assertEqual(team["seed"], "1")
+        self.assertEqual(team["seed"], 1)
         self.assertEqual(team["name"], "Duke")
-        self.assertEqual(team["score"], "78")
+        self.assertEqual(team["score"], 78)
 
     def test_parse_game_extracts_correct_game_data(self):
         """Test game parsing function extracts year, bracket, round, teams, and location"""
@@ -178,22 +173,24 @@ class ParseGameTests(TestCase):
 
         mock_location_link = MagicMock()
         mock_location_link.get_text.return_value = "at New Orleans"
-        mock_location.contents = [mock_location_link]
+        mock_location.find.return_value = mock_location_link
 
         year = 2025
         bracket = "East"
         round_num = 1
 
         # Act
-        with patch("scraper.utils._parse_team") as mock_parse_team:
+        with patch("scraper.scores_scraper._parse_team") as mock_parse_team:
             mock_parse_team.side_effect = [
-                {"name": "Duke", "seed": "1", "won": True, "score": "78"},
-                {"name": "UNC", "seed": "2", "won": False, "score": "74"},
+                {"name": "Duke", "seed": 1, "won": True, "score": 78},
+                {"name": "UNC", "seed": 2, "won": False, "score": 74},
             ]
             # pylint: disable=duplicate-code
             game = _parse_game(year, bracket, round_num, mock_game_node, MOCK_TASK_ID)
 
         # Assert
+        self.assertIsNotNone(game)
+        assert game is not None
         self.assertEqual(game["year"], year)
         self.assertEqual(game["bracket"], bracket)
         self.assertEqual(game["round"], round_num)
@@ -215,14 +212,16 @@ class ParseGameTests(TestCase):
         round_num = 2
 
         # Act
-        with patch("scraper.utils._parse_team") as mock_parse_team:
+        with patch("scraper.scores_scraper._parse_team") as mock_parse_team:
             mock_parse_team.side_effect = [
-                {"name": "Michigan", "seed": "1", "won": True},
-                {"name": "Ohio", "seed": "8", "won": False},
+                {"name": "Michigan", "seed": 1, "won": True},
+                {"name": "Ohio", "seed": 8, "won": False},
             ]
             game = _parse_game(year, bracket, round_num, mock_game_node, MOCK_TASK_ID)
 
         # Assert
+        self.assertIsNotNone(game)
+        assert game is not None
         self.assertEqual(game["year"], year)
         self.assertEqual(game["bracket"], bracket)
         self.assertEqual(game["round"], round_num)
@@ -243,15 +242,7 @@ class ParseGameTests(TestCase):
         round_num = 1
 
         # Act
-        with patch("scraper.utils._parse_team") as mock_parse_team:
-            # pylint: disable=duplicate-code
-            mock_parse_team.return_value = {"name": "Duke", "seed": "2", "won": True}
-            game = _parse_game(year, bracket, round_num, mock_game_node, MOCK_TASK_ID)
+        game = _parse_game(year, bracket, round_num, mock_game_node, MOCK_TASK_ID)
 
         # Assert
-        self.assertEqual(game["year"], year)
-        self.assertEqual(game["bracket"], bracket)
-        self.assertEqual(game["round"], round_num)
-        self.assertEqual(game["team_a"]["name"], "Duke")
-        self.assertNotIn("team_b", game)  # No team B should be present
-        self.assertIsNone(game["location"])  # Location should be None
+        self.assertIsNone(game)
