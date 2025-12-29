@@ -6,6 +6,7 @@ ensuring proper handling of requests, errors, and background task management.
 
 from unittest.mock import MagicMock, patch
 
+from django.conf import settings
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -45,7 +46,10 @@ class ScrapeAllViewTests(TestCase):
         self.assertEqual(data["task_id"], "test-task-id")
         self.assertEqual(data["status"], TaskStatus.PENDING.value)
         mock_cleanup.assert_called_once()
-        mock_create.assert_called_once_with("scrape_all", {"start_year": 2025})
+        mock_create.assert_called_once_with(
+            "scrape_all",
+            {"start_year": settings.CURRENT_YEAR, "end_year": settings.CURRENT_YEAR},
+        )
         mock_run.assert_called_once()
 
     @patch("scraper.views.run_task_in_thread")
@@ -65,7 +69,9 @@ class ScrapeAllViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data["success"])
-        mock_create.assert_called_once_with("scrape_all", {"start_year": 2023})
+        mock_create.assert_called_once_with(
+            "scrape_all", {"start_year": 2023, "end_year": settings.CURRENT_YEAR}
+        )
 
     def test_scrape_all_with_invalid_year(self):
         """Test scrape_all with an invalid year parameter"""
@@ -125,7 +131,10 @@ class ScrapeStatsViewTests(TestCase):
         self.assertTrue(data["success"])
         self.assertEqual(data["task_id"], "stats-task-id")
         self.assertEqual(data["status"], TaskStatus.PENDING.value)
-        mock_create.assert_called_once_with("scrape_stats", {"start_year": 2025})
+        mock_create.assert_called_once_with(
+            "scrape_stats",
+            {"start_year": settings.CURRENT_YEAR, "end_year": settings.CURRENT_YEAR},
+        )
         mock_run.assert_called_once()
 
     @patch("scraper.views.run_task_in_thread")
@@ -145,7 +154,9 @@ class ScrapeStatsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data["success"])
-        mock_create.assert_called_once_with("scrape_stats", {"start_year": 2022})
+        mock_create.assert_called_once_with(
+            "scrape_stats", {"start_year": 2022, "end_year": settings.CURRENT_YEAR}
+        )
 
     def test_scrape_stats_view_invalid_year(self):
         """Test scrape_stats_view with an invalid year parameter"""
@@ -204,7 +215,10 @@ class ScrapeRatingsViewTests(TestCase):
         data = response.json()
         self.assertTrue(data["success"])
         self.assertEqual(data["task_id"], "ratings-task-id")
-        mock_create.assert_called_once_with("scrape_ratings", {"start_year": 2025})
+        mock_create.assert_called_once_with(
+            "scrape_ratings",
+            {"start_year": settings.CURRENT_YEAR, "end_year": settings.CURRENT_YEAR},
+        )
         mock_run.assert_called_once()
 
     def test_scrape_ratings_view_invalid_year(self):
@@ -248,7 +262,10 @@ class ScrapeScoresViewTests(TestCase):
         data = response.json()
         self.assertTrue(data["success"])
         self.assertEqual(data["task_id"], "scores-task-id")
-        mock_create.assert_called_once_with("scrape_scores", {"start_year": 2025})
+        mock_create.assert_called_once_with(
+            "scrape_scores",
+            {"start_year": settings.CURRENT_YEAR, "end_year": settings.CURRENT_YEAR},
+        )
 
     @patch("scraper.views.create_task")
     def test_scrape_scores_view_unexpected_error(self, mock_create):
