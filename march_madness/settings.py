@@ -82,9 +82,29 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOW_ALL_ORIGINS = True
 
 # App-specific settings
-DATA_PATH = os.path.join(BASE_DIR, "data")
+DEFAULT_DATA_PATH = os.path.join(BASE_DIR, "data")
+DATA_PATH = os.getenv("MARCH_MADNESS_DATA_PATH", DEFAULT_DATA_PATH)
 START_YEAR = 2008
-CURRENT_YEAR = datetime.now().year
+
+
+def get_current_season_year(now: datetime | None = None) -> int:
+    """Return the "season/tournament" year used by the scrapers.
+
+    In men's college basketball, the season spans two calendar years.
+    For example, in Dec 2025 the active season is typically considered the
+    2025-2026 season, and most data sources key it by the tournament year (2026).
+
+    The rollover month is configurable via SEASON_YEAR_ROLLOVER_MONTH.
+    """
+
+    now = now or datetime.now()
+    rollover_month = int(os.getenv("SEASON_YEAR_ROLLOVER_MONTH", "7"))
+    if not 1 <= rollover_month <= 12:
+        rollover_month = 7
+    return now.year + (1 if now.month >= rollover_month else 0)
+
+
+CURRENT_YEAR = get_current_season_year()
 
 # Create data directory if it doesn't exist
 os.makedirs(DATA_PATH, exist_ok=True)
