@@ -29,33 +29,40 @@ from scraper.trank_scraper import scrape_trank
 from scraper.utils import DataScrapingError
 
 logger = logging.getLogger(__name__)
-CURRENT_YEAR = settings.CURRENT_YEAR
+
+
+def _parse_year_param(value: str, name: str) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Invalid year format for {name}.") from e
 
 
 def _determine_year_range(
     request, path_start_year: int | None, path_end_year: int | None
 ) -> tuple[int, int]:
     """Determines the effective start and end years from query or path parameters."""
+    current_year = settings.CURRENT_YEAR
     start_year_str = request.GET.get("start_year")
     end_year_str = request.GET.get("end_year")
     if start_year_str:
-        start_year = int(start_year_str)
+        start_year = _parse_year_param(start_year_str, "start_year")
     elif path_start_year is not None:
         start_year = int(path_start_year)
     else:
-        start_year = CURRENT_YEAR
+        start_year = current_year
 
     if end_year_str:
-        end_year = int(end_year_str)
+        end_year = _parse_year_param(end_year_str, "end_year")
     elif path_end_year is not None:
         end_year = int(path_end_year)
     else:
-        end_year = CURRENT_YEAR
+        end_year = current_year
 
     if start_year > end_year:
         raise ValueError("Start year cannot be after end year.")
-    if end_year > CURRENT_YEAR:
-        raise ValueError(f"End year ({end_year}) cannot be after current year ({CURRENT_YEAR}).")
+    if end_year > current_year:
+        raise ValueError(f"End year ({end_year}) cannot be after current year ({current_year}).")
     return start_year, end_year
 
 
