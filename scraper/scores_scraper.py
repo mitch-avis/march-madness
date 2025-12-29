@@ -2,6 +2,7 @@
 
 import logging
 import time
+from datetime import date
 from typing import Optional
 
 import pandas as pd
@@ -20,6 +21,17 @@ from scraper.utils import (
 logger = logging.getLogger(__name__)
 
 SPORTS_REF_URL_BASE = "https://www.sports-reference.com/cbb/postseason/men"
+
+
+def _tournament_is_expected_to_exist(year: int) -> bool:
+    """Return True if the NCAA tournament page should be populated for `year`.
+
+    Sports-Reference pages for future tournament years often exist but won't
+    contain brackets/games until the tournament is underway or finished.
+    """
+
+    # Be conservative: require the calendar to be well past the tournament.
+    return date.today() >= date(year, 4, 15)
 
 
 def scrape_scores(
@@ -190,11 +202,27 @@ def _scrape_year_scores(session, year, task_id) -> list:
         parsed_response = BeautifulSoup(session_request.text, "html.parser")
         brackets_node = parsed_response.find(id="brackets")
         if not brackets_node:
+            if not _tournament_is_expected_to_exist(year):
+                logger.info(
+                    "Task %s: Tournament page for %d not populated yet; skipping (%s)",
+                    task_id,
+                    year,
+                    url,
+                )
+                return []
             raise DataScrapingError(f"Could not find brackets node for year {year} at URL {url}")
 
         # Use find_all directly on brackets_node for direct children with 'id' attribute
         bracket_children = brackets_node.find_all(lambda tag: tag.has_attr("id"), recursive=False)
         if not bracket_children:
+            if not _tournament_is_expected_to_exist(year):
+                logger.info(
+                    "Task %s: Tournament brackets for %d not available yet; skipping (%s)",
+                    task_id,
+                    year,
+                    url,
+                )
+                return []
             raise DataScrapingError(
                 f"Could not find bracket children nodes for year {year} at URL {url}"
             )
@@ -204,6 +232,15 @@ def _scrape_year_scores(session, year, task_id) -> list:
             games.extend(bracket_games)
 
     except requests.RequestException as e:
+        status_code = getattr(getattr(e, "response", None), "status_code", None)
+        if status_code == 404 and not _tournament_is_expected_to_exist(year):
+            logger.info(
+                "Task %s: Scores page for %d not found yet (404); skipping (%s)",
+                task_id,
+                year,
+                url,
+            )
+            return []
         error_msg = f"HTTP request failed for scores year {year}: {e}"
         logger.error("Task %s: %s", task_id, error_msg)
         raise DataScrapingError(error_msg) from e
