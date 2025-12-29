@@ -54,7 +54,9 @@ class TaskTests(TestCase):
         self.assertIsNotNone(task.started_at)
         # Verify timestamp format is ISO
         try:
-            datetime.fromisoformat(task.started_at)
+            started_at = task.started_at
+            assert started_at is not None
+            datetime.fromisoformat(started_at)
             format_valid = True
         except ValueError:
             format_valid = False
@@ -237,7 +239,7 @@ class TaskManagerFunctionsTests(TestCase):
         """Test that run_task_in_thread actually executes the function"""
         # Arrange
         task = create_task("test_task")
-        result_container = {"was_called": False}
+        result_container: dict[str, object] = {"was_called": False}
 
         def test_function(arg1, kwarg1=None):
             result_container["was_called"] = True
