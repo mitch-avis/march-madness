@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 # Global tasks registry
-tasks = {}
+tasks: dict[str, "Task"] = {}
 
 
 class TaskError(Exception):
@@ -51,16 +51,16 @@ class Task:  # pylint: disable=too-many-instance-attributes
             task_type: Type of task (e.g., "scrape_stats")
             params: Parameters used for the task
         """
-        self.id = str(secrets.token_urlsafe(6))
-        self.task_type = task_type
-        self.status = TaskStatus.PENDING
-        self.created_at = datetime.now().isoformat()
-        self.started_at = None
-        self.completed_at = None
-        self.params = params or {}
-        self.error = None
-        self.progress = 0
-        self.cancelled = False
+        self.id: str = str(secrets.token_urlsafe(6))
+        self.task_type: str = task_type
+        self.status: TaskStatus = TaskStatus.PENDING
+        self.created_at: str = datetime.now().isoformat()
+        self.started_at: str | None = None
+        self.completed_at: str | None = None
+        self.params: Dict = params or {}
+        self.error: str | None = None
+        self.progress: int = 0
+        self.cancelled: bool = False
         logger.debug(
             "Task %s initialized (Type: %s, Params: %s)", self.id, self.task_type, self.params
         )
@@ -71,7 +71,7 @@ class Task:  # pylint: disable=too-many-instance-attributes
         self.started_at = datetime.now().isoformat()
         logger.info("Task %s started.", self.id)
 
-    def complete(self, success: bool, error: str = None):
+    def complete(self, success: bool, error: str | None = None):
         """Mark task as completed.
 
         Args:
@@ -146,14 +146,17 @@ def create_task(task_type: str, params: Optional[Dict] = None) -> Task:
     return task
 
 
-def get_task(task_id: str) -> Optional[Task]:
+def get_task(task_id: str) -> Task:
     """Get task by ID.
 
     Args:
         task_id: Task identifier
 
     Returns:
-        Task if found, None otherwise
+        Task if found.
+
+    Raises:
+        TaskNotFoundError: If the task ID is not found.
     """
     task = tasks.get(task_id)
     if not task:
