@@ -70,7 +70,16 @@
         <script>
             // Track active polling intervals
             const activePolling = {}
-            const currentYear = new Date().getFullYear() // Get the actual current year
+
+            // Season/tournament year: e.g. Dec 2025 => 2026.
+            // Keep in sync with backend default rollover month (July).
+            const seasonYearRolloverMonth = 7
+            function getCurrentSeasonYear(d = new Date()) {
+                const month = d.getMonth() + 1 // JS months are 0-based
+                return d.getFullYear() + (month >= seasonYearRolloverMonth ? 1 : 0)
+            }
+
+            const currentYear = getCurrentSeasonYear()
 
             // Function to prompt for year and start scraping
             function promptAndStartScraping(type) {
