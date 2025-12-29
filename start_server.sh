@@ -24,4 +24,8 @@ fi
 
 # Start the Django development server on port 8080, accessible from network
 echo "Starting Django server on 0.0.0.0:8080..."
+
+# Where CSVs are written (WSL -> Windows OneDrive path)
+export MARCH_MADNESS_DATA_PATH="/mnt/c/Users/mitch/OneDrive/March Madness/Data"
+
 python manage.py runserver 0.0.0.0:8080
