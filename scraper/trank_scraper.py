@@ -2,6 +2,7 @@
 
 import logging
 import time
+from io import StringIO
 from typing import Optional
 
 import pandas as pd
@@ -10,8 +11,10 @@ import requests
 from scraper.task_manager import TaskCancelledError, get_task
 from scraper.utils import (
     CURRENT_YEAR,
-    END_DATES,
+    REQUEST_TIMEOUT,
     DataScrapingError,
+    create_session,
+    get_end_day,
     write_df_to_csv,
 )
 
@@ -133,12 +136,7 @@ def scrape_trank(
                 "Task %s: Processing T-Rank for year %d (%d/%d)", task_id, year, i + 1, total_years
             )
 
-            end_day = END_DATES.get(year)
-            if end_day is None:
-                logger.warning(
-                    "Task %s: No end date found for T-Rank year %d. Skipping.", task_id, year
-                )
-                continue
+            end_day = get_end_day(year)
 
             try:
                 _process_trank_year(year, end_day, raw_headers, T_RANK_RATING_NAMES, task_id)
@@ -197,8 +195,28 @@ def _process_trank_year(
         url = f"{T_RANK_URL_BASE}?&begin={year-1}1101&end={year}03{end_day-1}" f"&year={year}&csv=1"
         logger.debug("Task %s: Requesting T-Rank data for %s from URL: %s", task_id, year, url)
 
+        # Fetch CSV with headers (BartTorvik may return HTML/blocked content without a UA)
+        with create_session() as session:
+            response = session.get(
+                url,
+                timeout=REQUEST_TIMEOUT,
+                headers={
+                    "User-Agent": (
+                        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                    )
+                },
+            )
+            response.raise_for_status()
+            body = response.text.lstrip("\ufeff\n\r\t ")
+            if body.startswith("<"):
+                raise DataScrapingError(
+                    f"T-Rank returned HTML instead of CSV for year {year}. "
+                    "The site may be blocking automated requests."
+                )
+
         # Read the CSV data
-        df = pd.read_csv(url, header=None)
+        df = pd.read_csv(StringIO(body), header=None, engine="python")
         logger.debug("Task %s: Read %d rows from T-Rank CSV for %d", task_id, len(df), year)
 
         # Assign raw headers and check column count
