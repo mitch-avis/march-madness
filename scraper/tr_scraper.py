@@ -12,7 +12,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from scraper.task_manager import Task, TaskCancelledError, get_task
-from scraper.utils import CURRENT_YEAR, END_DATES, DataScrapingError, write_df_to_csv
+from scraper.utils import CURRENT_YEAR, DataScrapingError, get_end_day, write_df_to_csv
 
 logger = logging.getLogger(__name__)
 
@@ -198,15 +198,7 @@ def _scrape_generic(
                         f"Task {task_id} cancelled during {item_config.scrape_type} scraping loop."
                     )
 
-                end_day = END_DATES.get(year)
-                if end_day is None:
-                    logger.warning(
-                        "Task %s: No end date found for %s year %d. Skipping.",
-                        task_id,
-                        item_config.scrape_type,
-                        year,
-                    )
-                    continue
+                end_day = get_end_day(year)
 
                 logger.info(
                     "Task %s: Processing %s for year %d (%d/%d)",
