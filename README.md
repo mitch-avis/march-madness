@@ -5,7 +5,6 @@
 ## 📋 Features
 
 - **Multi-Source Data Collection**: Automated scraping from various basketball statistics sources:
-  - Team rankings and efficiency metrics from T-Rank (barttorvik.com)
   - Comprehensive team statistics from TeamRankings.com
   - Historical tournament results from [Sports Reference](https://www.sports-reference.com/cbb/postseason/men)
 - **Asynchronous Processing**: Background task system for non-blocking data collection
@@ -73,7 +72,6 @@ The application allows collecting several types of NCAA basketball data:
 1. Navigate to the main dashboard
 2. Click on one of the scraping options:
    - **Scrape All Data**: Collects all available data types in sequence
-   - **Scrape T-Rank Data**: Advanced team efficiency metrics
    - **Scrape Team Statistics**: Comprehensive team performance stats
    - **Scrape Team Ratings**: Various rating systems for comparative analysis
    - **Scrape Tournament Scores**: Historical game results from past tournaments
@@ -87,9 +85,6 @@ The application exposes RESTful endpoints for triggering scraping tasks:
 # Scrape all data types from 2015 onward
 curl -X GET http://127.0.0.1:8000/scraper/all/2015/
 
-# Scrape T-Rank data from 2018 onward
-curl -X GET http://127.0.0.1:8000/scraper/trank/2018/
-
 # Check task status
 curl -X GET http://127.0.0.1:8000/scraper/task/[task-id]/
 ```
@@ -99,7 +94,7 @@ curl -X GET http://127.0.0.1:8000/scraper/task/[task-id]/
 The application generates several CSV files in the `data` directory:
 
 | File Pattern | Description |
-|--------------|-------------|
+| ------------ | ----------- |
 | `TeamRankings[Year].csv` | Team statistics for a specific year |
 | `TeamRankingsRatings[Year].csv` | Team ratings for a specific year |
 | `Scores[Year].csv` | Tournament game results for a specific year |
@@ -130,9 +125,8 @@ march-madness/
 ### Endpoints
 
 | Endpoint | Method | Description |
-|----------|--------|-------------|
+| -------- | ------ | ----------- |
 | `/scraper/all/[year]/` | GET | Start scraping all data types from specified year |
-| `/scraper/trank/[year]/` | GET | Scrape T-Rank data from specified year |
 | `/scraper/stats/[year]/` | GET | Scrape team statistics from specified year |
 | `/scraper/ratings/[year]/` | GET | Scrape team ratings from specified year |
 | `/scraper/scores/[year]/` | GET | Scrape tournament scores from specified year |
@@ -178,5 +172,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙏 Acknowledgements
 
 - NCAA for making March the most exciting month in sports
-- Data sources: barttorvik.com, teamrankings.com, sports-reference.com
+- Data sources: teamrankings.com, sports-reference.com
 - The Python and Django communities for their excellent tools

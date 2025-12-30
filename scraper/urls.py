@@ -14,8 +14,6 @@ app_name = "scraper"  # pylint: disable=invalid-name
 urlpatterns = [
     path("all/", views.scrape_all, name="scrape_all"),
     path("all/<int:start_year>/", views.scrape_all, name="scrape_all_year"),
-    path("trank/", views.scrape_trank_view, name="scrape_trank"),
-    path("trank/<int:start_year>/", views.scrape_trank_view, name="scrape_trank_year"),
     path("stats/", views.scrape_stats_view, name="scrape_stats"),
     path("stats/<int:start_year>/", views.scrape_stats_view, name="scrape_stats_year"),
     path("ratings/", views.scrape_ratings_view, name="scrape_ratings"),

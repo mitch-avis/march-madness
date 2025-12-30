@@ -25,7 +25,6 @@ from scraper.task_manager import (
     run_task_in_thread,
 )
 from scraper.tr_scraper import scrape_ratings, scrape_stats
-from scraper.trank_scraper import scrape_trank
 from scraper.utils import DataScrapingError
 
 logger = logging.getLogger(__name__)
@@ -69,7 +68,6 @@ def _determine_year_range(
 def _scrape_single_year(task: Task, year: int, total_operations: int, operations_done: int) -> int:
     """Performs all scraping operations for a single year and updates progress."""
     operations = [
-        ("T-Rank", scrape_trank),
         ("Stats", scrape_stats),
         ("Ratings", scrape_ratings),
     ]
@@ -105,7 +103,7 @@ def _run_all_scraping_task(start_yr: int, end_yr: int, task_id: str):
 
         years_to_process = [y for y in range(start_yr, end_yr + 1) if y != 2020]
         num_years = len(years_to_process)
-        operations_per_year = 3  # T-Rank, Stats, Ratings
+        operations_per_year = 2  # Stats, Ratings
         total_operations = num_years * operations_per_year
 
         if total_operations == 0:
@@ -177,46 +175,6 @@ def scrape_all(request, start_year=None, end_year=None):
         return JsonResponse({"success": False, "error": str(e)}, status=HTTPStatus.BAD_REQUEST)
     except Exception as e:
         logger.exception("Unexpected error in scrape_all endpoint")
-        return JsonResponse(
-            {"success": False, "error": f"Server error: {str(e)}"},
-            status=HTTPStatus.INTERNAL_SERVER_ERROR,
-        )
-
-
-@csrf_exempt
-@require_http_methods(["GET"])
-def scrape_trank_view(request, start_year=None, end_year=None):
-    """Scrape T-Rank data endpoint."""
-    try:
-        effective_start_year, effective_end_year = _determine_year_range(
-            request, start_year, end_year
-        )
-        logger.info(
-            "Starting background task for scraper:trank for years %d to %d...",
-            effective_start_year,
-            effective_end_year,
-        )
-        cleanup_old_tasks()
-        task = create_task(
-            "scrape_trank", {"start_year": effective_start_year, "end_year": effective_end_year}
-        )
-        run_task_in_thread(
-            scrape_trank, task, effective_start_year, effective_end_year, task_id=task.id
-        )
-        return JsonResponse(
-            {
-                "success": True,
-                "message": "T-Rank data scraping started",
-                "task_id": task.id,
-                "status": task.status.value,
-            }
-        )
-
-    except ValueError as e:
-        logger.warning("Invalid year range in scrape_trank: %s", str(e))
-        return JsonResponse({"success": False, "error": str(e)}, status=HTTPStatus.BAD_REQUEST)
-    except Exception as e:
-        logger.exception("Unexpected error in scrape_trank endpoint")
         return JsonResponse(
             {"success": False, "error": f"Server error: {str(e)}"},
             status=HTTPStatus.INTERNAL_SERVER_ERROR,
