@@ -89,6 +89,31 @@ curl -X GET http://127.0.0.1:8000/scraper/all/2015/
 curl -X GET http://127.0.0.1:8000/scraper/task/[task-id]/
 ```
 
+#### Run scrapers without the server
+
+If you only want to refresh TeamRankings stats/ratings (and don’t want to start the Django dev
+server), run:
+
+```bash
+python run_teamrankings_scrapers.py
+```
+
+This uses the same `MARCH_MADNESS_DATA_PATH` env var as the server. If it’s not set,
+the script will default to the OneDrive path from `start_server.sh` when that folder exists.
+
+Optional:
+
+```bash
+# Just validate imports / show what would run
+python run_teamrankings_scrapers.py --dry-run
+
+# Force a specific output folder
+python run_teamrankings_scrapers.py --data-path "/mnt/c/Users/mitch/OneDrive/March Madness/Data"
+
+# Override year range
+python run_teamrankings_scrapers.py --start-year 2026 --end-year 2026
+```
+
 ### Data Files
 
 The application generates several CSV files in the `data` directory:
