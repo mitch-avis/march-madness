@@ -13,14 +13,15 @@ from core.views import health, home
 
 
 class CoreViewsTests(TestCase):
-    """Tests for core views"""
+    """Tests for core views."""
 
     def setUp(self):
+        """Set up the test client."""
         # Create test client
         self.client = Client()
 
     def test_home_view_returns_200_and_correct_template(self):
-        """Test the home view returns successfully"""
+        """Test the home view returns successfully."""
         # Act
         response = self.client.get(reverse("core:home"))
 
@@ -29,7 +30,7 @@ class CoreViewsTests(TestCase):
         self.assertTemplateUsed(response, "index.html")
 
     def test_health_view_returns_200_and_correct_data(self):
-        """Test the health view returns correctly"""
+        """Test the health view returns correctly."""
         # Act
         response = self.client.get(reverse("core:health"))
 
@@ -40,10 +41,10 @@ class CoreViewsTests(TestCase):
 
 
 class CoreURLsTests(TestCase):
-    """Tests for URL routing in the core app"""
+    """Tests for URL routing in the core app."""
 
     def test_home_url_resolves_to_home_view(self):
-        """Test the home URL resolves to the home view"""
+        """Test the home URL resolves to the home view."""
         # Arrange
         url = reverse("core:home")
 
@@ -54,7 +55,7 @@ class CoreURLsTests(TestCase):
         self.assertEqual(found.func, home)
 
     def test_health_url_resolves_to_health_view(self):
-        """Test the health URL resolves to the health view"""
+        """Test the health URL resolves to the health view."""
         # Arrange
         url = reverse("core:health")
 
@@ -66,10 +67,10 @@ class CoreURLsTests(TestCase):
 
 
 class HealthViewTests(TestCase):
-    """Tests specifically for the health view function"""
+    """Tests specifically for the health view function."""
 
     def test_health_response_has_json_content_type(self):
-        """Test that the response content type is application/json"""
+        """Test that the response content type is application/json."""
         # Act
         response = self.client.get(reverse("core:health"))
 
@@ -78,7 +79,7 @@ class HealthViewTests(TestCase):
 
     @patch("core.views.logger")
     def test_health_logs_request(self, mock_logger):
-        """Test that the logger is called when health endpoint is accessed"""
+        """Test that the logger is called when health endpoint is accessed."""
         # Act
         self.client.get(reverse("core:health"))
 
