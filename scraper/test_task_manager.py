@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 
-# pylint: disable=duplicate-code
 from scraper.task_manager import (
     Task,
     TaskError,
@@ -21,14 +20,14 @@ from scraper.task_manager import (
 
 
 class TaskTests(TestCase):
-    """Tests for the Task class"""
+    """Tests for the Task class."""
 
     def setUp(self):
-        """Reset the tasks registry before each test"""
+        """Reset the tasks registry before each test."""
         tasks.clear()
 
     def test_task_initialization(self):
-        """Test that a task is properly initialized with default values"""
+        """Test that a task is properly initialized with default values."""
         # Act
         task = Task("test_task", {"param": "value"})
 
@@ -42,7 +41,7 @@ class TaskTests(TestCase):
         self.assertIsNone(task.error)
 
     def test_task_start_updates_status_and_timestamp(self):
-        """Test that starting a task updates its status and timestamp"""
+        """Test that starting a task updates its status and timestamp."""
         # Arrange
         task = Task("test_task")
 
@@ -55,7 +54,9 @@ class TaskTests(TestCase):
         # Verify timestamp format is ISO
         try:
             started_at = task.started_at
-            assert started_at is not None
+            self.assertIsNotNone(started_at)
+            if started_at is None:
+                self.fail("Started timestamp was not set")
             datetime.fromisoformat(started_at)
             format_valid = True
         except ValueError:
@@ -63,7 +64,7 @@ class TaskTests(TestCase):
         self.assertTrue(format_valid, "Started timestamp is not in ISO format")
 
     def test_task_complete_success_updates_status(self):
-        """Test that completing a task successfully updates status"""
+        """Test that completing a task successfully updates status."""
         # Arrange
         task = Task("test_task")
 
@@ -77,7 +78,7 @@ class TaskTests(TestCase):
         self.assertIsNone(task.error)
 
     def test_task_complete_failure_updates_status_and_error(self):
-        """Test that completing a task with failure sets error message"""
+        """Test that completing a task with failure sets error message."""
         # Arrange
         task = Task("test_task")
         error_msg = "Task failed"
@@ -92,7 +93,7 @@ class TaskTests(TestCase):
         self.assertEqual(task.error, error_msg)
 
     def test_task_update_progress_within_bounds(self):
-        """Test that updating progress works within expected bounds"""
+        """Test that updating progress works within expected bounds."""
         # Arrange
         task = Task("test_task")
 
@@ -109,7 +110,7 @@ class TaskTests(TestCase):
         self.assertEqual(task.progress, 0)
 
     def test_task_to_dict_returns_all_fields(self):
-        """Test that to_dict returns all task fields in a dictionary"""
+        """Test that to_dict returns all task fields in a dictionary."""
         # Arrange
         task = Task("test_task", {"param": "value"})
         task.start()
@@ -131,14 +132,14 @@ class TaskTests(TestCase):
 
 
 class TaskManagerFunctionsTests(TestCase):
-    """Tests for the task manager utility functions"""
+    """Tests for the task manager utility functions."""
 
     def setUp(self):
-        """Reset the tasks registry before each test"""
+        """Reset the tasks registry before each test."""
         tasks.clear()
 
     def test_create_task_adds_to_registry(self):
-        """Test that create_task adds the task to the registry"""
+        """Test that create_task adds the task to the registry."""
         # Act
         task = create_task("test_task", {"year": 2023})
 
@@ -149,7 +150,7 @@ class TaskManagerFunctionsTests(TestCase):
         self.assertEqual(task.params, {"year": 2023})
 
     def test_get_task_returns_correct_task(self):
-        """Test that get_task returns the correct task by ID"""
+        """Test that get_task returns the correct task by ID."""
         # Arrange
         task = create_task("test_task")
 
@@ -160,13 +161,13 @@ class TaskManagerFunctionsTests(TestCase):
         self.assertEqual(retrieved_task, task)
 
     def test_get_task_raises_error_for_nonexistent_task(self):
-        """Test that get_task raises an error for a nonexistent task ID"""
+        """Test that get_task raises an error for a nonexistent task ID."""
         # Act & Assert
         with self.assertRaises(TaskNotFoundError):
             get_task("nonexistent-id")
 
     def test_get_recent_tasks_returns_sorted_tasks(self):
-        """Test that get_recent_tasks returns tasks sorted by creation time"""
+        """Test that get_recent_tasks returns tasks sorted by creation time."""
         # Arrange
         task1 = create_task("task1")
         task2 = create_task("task2")
@@ -182,7 +183,7 @@ class TaskManagerFunctionsTests(TestCase):
         self.assertEqual(recent_tasks[2]["id"], task1.id)
 
     def test_get_recent_tasks_respects_limit(self):
-        """Test that get_recent_tasks respects the limit parameter"""
+        """Test that get_recent_tasks respects the limit parameter."""
         # Arrange
         for i in range(5):
             create_task(f"task{i}")
@@ -194,7 +195,7 @@ class TaskManagerFunctionsTests(TestCase):
         self.assertEqual(len(recent_tasks), 3)
 
     def test_cleanup_old_tasks_removes_completed_tasks(self):
-        """Test that cleanup_old_tasks removes old completed tasks"""
+        """Test that cleanup_old_tasks removes old completed tasks."""
         # Arrange
         task1 = create_task("old_task")
         task1.start()
@@ -220,7 +221,7 @@ class TaskManagerFunctionsTests(TestCase):
 
     @patch("threading.Thread")
     def test_run_task_in_thread_starts_thread(self, mock_thread):
-        """Test that run_task_in_thread starts a thread with the function"""
+        """Test that run_task_in_thread starts a thread with the function."""
         # Arrange
         task = create_task("test_task")
         mock_func = MagicMock()
@@ -236,7 +237,7 @@ class TaskManagerFunctionsTests(TestCase):
         self.assertEqual(result, mock_thread_instance)
 
     def test_run_task_in_thread_executes_function(self):
-        """Test that run_task_in_thread actually executes the function"""
+        """Test that run_task_in_thread actually executes the function."""
         # Arrange
         task = create_task("test_task")
         result_container: dict[str, object] = {"was_called": False}
@@ -261,10 +262,10 @@ class TaskManagerFunctionsTests(TestCase):
 
 
 class TaskExceptionsTests(TestCase):
-    """Tests for the task manager exception classes"""
+    """Tests for the task manager exception classes."""
 
     def test_task_error_has_correct_message(self):
-        """Test that TaskError has the correct error message"""
+        """Test that TaskError has the correct error message."""
         # Arrange & Act
         error = TaskError("Custom error message")
 
@@ -273,7 +274,7 @@ class TaskExceptionsTests(TestCase):
         self.assertEqual(error.message, "Custom error message")
 
     def test_task_not_found_error_has_correct_message(self):
-        """Test that TaskNotFoundError has the correct error message"""
+        """Test that TaskNotFoundError has the correct error message."""
         # Arrange & Act
         error = TaskNotFoundError("Task ID abc123 not found")
 
