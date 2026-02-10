@@ -1,5 +1,6 @@
 """Unit tests for score scraper utility functions."""
 
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 from bs4 import BeautifulSoup
@@ -16,14 +17,14 @@ MOCK_TASK_ID = "abcdef"
 
 
 class ScrapeYearScoresTests(TestCase):
-    """Tests for the _scrape_year_scores function"""
+    """Tests for the _scrape_year_scores function."""
 
     @patch("requests.Session")
     @patch("scraper.scores_scraper._parse_bracket_games")
     def test_scrape_year_scores_calls_parse_bracket_games(
         self, mock_parse_bracket_games, _mock_session
     ):
-        """Test that _scrape_year_scores calls _parse_bracket_games correctly"""
+        """Test that _scrape_year_scores calls _parse_bracket_games correctly."""
         # Arrange
         mock_session_instance = MagicMock()
         mock_response = MagicMock()
@@ -63,11 +64,11 @@ class ScrapeYearScoresTests(TestCase):
 
 
 class ParseBracketGamesTests(TestCase):
-    """Tests for the _parse_bracket_games function"""
+    """Tests for the _parse_bracket_games function."""
 
     @patch("scraper.scores_scraper._parse_game")
     def test_parse_bracket_games_calls_parse_game(self, mock_parse_game):
-        """Test that _parse_bracket_games calls _parse_game correctly"""
+        """Test that _parse_bracket_games calls _parse_game correctly."""
         # Arrange
         year = 2023
 
@@ -111,10 +112,10 @@ class ParseBracketGamesTests(TestCase):
 
 
 class ParseTeamTests(TestCase):
-    """Additional tests for the _parse_team function"""
+    """Additional tests for the _parse_team function."""
 
     def test_parse_team_with_missing_elements(self):
-        """Test _parse_team with missing team elements"""
+        """Test _parse_team with missing team elements."""
         # Arrange - Create a team node with only seed (no name or score)
         soup = BeautifulSoup("<div><span>4</span></div>", "html.parser")
         team_node = soup.find("div")
@@ -126,7 +127,7 @@ class ParseTeamTests(TestCase):
         self.assertIsNone(team)
 
     def test_parse_team_with_no_children(self):
-        """Test _parse_team with no child elements"""
+        """Test _parse_team with no child elements."""
         # Arrange
         soup = BeautifulSoup('<div class="loser"></div>', "html.parser")
         team_node = soup.find("div")
@@ -139,10 +140,10 @@ class ParseTeamTests(TestCase):
 
 
 class ParseGameTests(TestCase):
-    """Additional tests for the _parse_game function"""
+    """Additional tests for the _parse_game function."""
 
     def test_parse_team_extracts_correct_team_data(self):
-        """Test team parsing function extracts seed, name, score, and winning status"""
+        """Test team parsing function extracts seed, name, score, and winning status."""
         # Arrange
         soup = BeautifulSoup(
             '<div class="winner"><span>1</span><span>Duke</span><span>78</span></div>',
@@ -155,14 +156,14 @@ class ParseGameTests(TestCase):
 
         # Assert
         self.assertIsNotNone(team)
-        assert team is not None
-        self.assertTrue(team["won"])
-        self.assertEqual(team["seed"], 1)
-        self.assertEqual(team["name"], "Duke")
-        self.assertEqual(team["score"], 78)
+        team_data = cast(dict[str, Any], team)
+        self.assertTrue(team_data["won"])
+        self.assertEqual(team_data["seed"], 1)
+        self.assertEqual(team_data["name"], "Duke")
+        self.assertEqual(team_data["score"], 78)
 
     def test_parse_game_extracts_correct_game_data(self):
-        """Test game parsing function extracts year, bracket, round, teams, and location"""
+        """Test game parsing function extracts year, bracket, round, teams, and location."""
         # Arrange
         mock_game_node = MagicMock()
         mock_team_a = MagicMock()
@@ -185,21 +186,21 @@ class ParseGameTests(TestCase):
                 {"name": "Duke", "seed": 1, "won": True, "score": 78},
                 {"name": "UNC", "seed": 2, "won": False, "score": 74},
             ]
-            # pylint: disable=duplicate-code
+
             game = _parse_game(year, bracket, round_num, mock_game_node, MOCK_TASK_ID)
 
         # Assert
         self.assertIsNotNone(game)
-        assert game is not None
-        self.assertEqual(game["year"], year)
-        self.assertEqual(game["bracket"], bracket)
-        self.assertEqual(game["round"], round_num)
-        self.assertEqual(game["team_a"]["name"], "Duke")
-        self.assertEqual(game["team_b"]["name"], "UNC")
-        self.assertEqual(game["location"], "New Orleans")
+        game_data = cast(dict[str, Any], game)
+        self.assertEqual(game_data["year"], year)
+        self.assertEqual(game_data["bracket"], bracket)
+        self.assertEqual(game_data["round"], round_num)
+        self.assertEqual(game_data["team_a"]["name"], "Duke")
+        self.assertEqual(game_data["team_b"]["name"], "UNC")
+        self.assertEqual(game_data["location"], "New Orleans")
 
     def test_parse_game_with_no_location(self):
-        """Test _parse_game with missing location information"""
+        """Test _parse_game with missing location information."""
         # Arrange
         mock_game_node = MagicMock()
         # Just 2 child elements (team A and B), no location
@@ -221,16 +222,16 @@ class ParseGameTests(TestCase):
 
         # Assert
         self.assertIsNotNone(game)
-        assert game is not None
-        self.assertEqual(game["year"], year)
-        self.assertEqual(game["bracket"], bracket)
-        self.assertEqual(game["round"], round_num)
-        self.assertEqual(game["team_a"]["name"], "Michigan")
-        self.assertEqual(game["team_b"]["name"], "Ohio")
-        self.assertIsNone(game["location"])  # Location should be None
+        game_data = cast(dict[str, Any], game)
+        self.assertEqual(game_data["year"], year)
+        self.assertEqual(game_data["bracket"], bracket)
+        self.assertEqual(game_data["round"], round_num)
+        self.assertEqual(game_data["team_a"]["name"], "Michigan")
+        self.assertEqual(game_data["team_b"]["name"], "Ohio")
+        self.assertIsNone(game_data["location"])  # Location should be None
 
     def test_parse_game_with_only_one_team(self):
-        """Test _parse_game with only one team (e.g., forfeit)"""
+        """Test _parse_game with only one team (e.g., forfeit)."""
         # Arrange
         mock_game_node = MagicMock()
         # Just 1 child element (team A), no team B or location
