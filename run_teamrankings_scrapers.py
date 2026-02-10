@@ -12,9 +12,8 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
-
 
 DEFAULT_ONEDRIVE_DATA_PATH = "/mnt/c/Users/mitch/OneDrive/March Madness/Data"
 
@@ -30,7 +29,8 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
         default=None,
         help=(
             "Where CSVs are written. If omitted, uses $MARCH_MADNESS_DATA_PATH when set; "
-            f"otherwise defaults to {DEFAULT_ONEDRIVE_DATA_PATH} when it exists, or the app's ./data"
+            f"otherwise defaults to {DEFAULT_ONEDRIVE_DATA_PATH} when it exists, "
+            "or the app's ./data"
         ),
     )
     parser.add_argument(
@@ -54,6 +54,7 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Run TeamRankings scrapers with app-aligned defaults."""
     args = _parse_args(sys.argv[1:] if argv is None else argv)
 
     # Configure CSV output location before Django initializes settings.
@@ -69,11 +70,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     # Important: set up Django before importing scraper modules,
     # since scraper.utils reads from django.conf.settings at import time.
-    import django  # pylint: disable=import-outside-toplevel
+    import django
 
     django.setup()
 
-    from django.conf import settings  # pylint: disable=import-outside-toplevel
+    from django.conf import settings
 
     current_year = int(settings.CURRENT_YEAR)
     start_year = current_year if args.start_year is None else int(args.start_year)
@@ -82,9 +83,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if start_year > end_year:
         raise SystemExit("start_year cannot be after end_year")
     if end_year > current_year:
-        raise SystemExit(
-            f"end_year ({end_year}) cannot be after CURRENT_YEAR ({current_year})"
-        )
+        raise SystemExit(f"end_year ({end_year}) cannot be after CURRENT_YEAR ({current_year})")
 
     if args.dry_run:
         print(
@@ -95,7 +94,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("- scrape_ratings")
         return 0
 
-    from scraper.tr_scraper import scrape_ratings, scrape_stats  # pylint: disable=import-outside-toplevel
+    from scraper.tr_scraper import (
+        scrape_ratings,
+        scrape_stats,
+    )
 
     print(
         f"Running TeamRankings scrapers for years {start_year}..{end_year} "
