@@ -15,10 +15,10 @@ from scraper.utils import (
 
 
 class DataScrapingErrorTests(TestCase):
-    """Tests for the DataScrapingError class"""
+    """Tests for the DataScrapingError class."""
 
     def test_data_scraping_error_default_message(self):
-        """Test that DataScrapingError has the correct default message"""
+        """Test that DataScrapingError has the correct default message."""
         # Act
         error = DataScrapingError()
 
@@ -26,7 +26,7 @@ class DataScrapingErrorTests(TestCase):
         self.assertEqual(str(error), "Data scraping operation failed")
 
     def test_data_scraping_error_custom_message(self):
-        """Test that DataScrapingError accepts a custom message"""
+        """Test that DataScrapingError accepts a custom message."""
         # Act
         error = DataScrapingError("Failed to scrape ratings")
 
@@ -36,11 +36,11 @@ class DataScrapingErrorTests(TestCase):
 
 
 class FileOperationsTests(TestCase):
-    """Tests for file reading and writing functions"""
+    """Tests for file reading and writing functions."""
 
     @patch("pandas.read_csv")
     def test_read_df_from_csv_calls_pandas_read_csv(self, mock_read_csv):
-        """Test that read_df_from_csv calls pd.read_csv with correct path"""
+        """Test that read_df_from_csv calls pd.read_csv with correct path."""
         # Arrange
         mock_df = MagicMock()
         mock_read_csv.return_value = mock_df
@@ -55,7 +55,7 @@ class FileOperationsTests(TestCase):
 
     @patch("pandas.DataFrame.to_csv")
     def test_write_df_to_csv_calls_dataframe_to_csv(self, _mock_to_csv):
-        """Test that write_df_to_csv calls df.to_csv with correct path"""
+        """Test that write_df_to_csv calls df.to_csv with correct path."""
         # Arrange
         mock_df = MagicMock(spec=pd.DataFrame)
 
@@ -70,7 +70,7 @@ class FileOperationsTests(TestCase):
     @patch("scraper.utils.read_df_from_csv")
     @patch("scraper.utils.write_df_to_csv")
     def test_read_write_data_uses_existing_file(self, _mock_write_df, mock_read_df, mock_isfile):
-        """Test that read_write_data uses existing file when available"""
+        """Test that read_write_data uses existing file when available."""
         # Arrange
         mock_df = pd.DataFrame({"col1": [1, 2], "col2": [3, 4]})
         mock_isfile.return_value = True
@@ -90,7 +90,7 @@ class FileOperationsTests(TestCase):
     @patch("scraper.utils.read_df_from_csv")
     @patch("scraper.utils.write_df_to_csv")
     def test_read_write_data_generates_new_data(self, mock_write_df, mock_read_df, mock_isfile):
-        """Test that read_write_data generates new data when file doesn't exist"""
+        """Test that read_write_data generates new data when file doesn't exist."""
         # Arrange
         mock_isfile.return_value = False
         mock_read_df.return_value = pd.DataFrame()  # Empty dataframe
