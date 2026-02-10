@@ -3,7 +3,6 @@
 import logging
 import time
 from datetime import date
-from typing import Optional
 
 import pandas as pd
 import requests
@@ -29,24 +28,24 @@ def _tournament_is_expected_to_exist(year: int) -> bool:
     Sports-Reference pages for future tournament years often exist but won't
     contain brackets/games until the tournament is underway or finished.
     """
-
     # Be conservative: require the calendar to be well past the tournament.
     return date.today() >= date(year, 4, 15)
 
 
 def scrape_scores(
-    start_year: int, end_year: int = CURRENT_YEAR, task_id: Optional[str] = None
+    start_year: int, end_year: int = CURRENT_YEAR, task_id: str | None = None
 ) -> None:
-    # pylint: disable=too-many-locals
     """Scrape tournament game scores from given year to current year.
 
     Args:
         start_year: The earliest year to scrape scores for
+        end_year: The latest year to scrape scores for
         task_id: Optional task ID for progress tracking (used when called directly)
 
     Raises:
         TaskCancelledError: If the task is cancelled during execution.
         DataScrapingError: If a non-recoverable error occurs during scraping.
+
     """
     task = get_task(task_id) if task_id else None
     years_to_process = [y for y in range(start_year, end_year + 1) if y != 2020]
@@ -143,8 +142,8 @@ def scrape_scores(
         raise DataScrapingError(error_msg) from e
 
 
-def _process_single_year_scores(session, year, task, task_id) -> Optional[list]:
-    """Helper to scrape and process scores for a single year, handling errors."""
+def _process_single_year_scores(session, year, task, task_id) -> list | None:
+    """Scrape and process scores for a single year, handling errors."""
     try:
         if task and task.cancelled:
             logger.info("Task %s: Cancelled before processing scores for year %d.", task_id, year)
@@ -191,6 +190,7 @@ def _scrape_year_scores(session, year, task_id) -> list:
 
     Raises:
         DataScrapingError: If the request fails or parsing encounters an error.
+
     """
     games = []
     url = f"{SPORTS_REF_URL_BASE}/{year}-ncaa.html"
@@ -263,6 +263,7 @@ def _parse_bracket_games(year, bracket_child, task_id):
 
     Returns:
         List of game dictionaries for the given bracket
+
     """
     bracket_games = []
     bracket_id = bracket_child.get("id", "unknown_bracket")  # Default if id is missing
@@ -297,9 +298,7 @@ def _parse_bracket_games(year, bracket_child, task_id):
     return bracket_games
 
 
-def _parse_game(
-    year: int, bracket_id: str, round_number: int, game_node, task_id
-) -> Optional[dict]:
+def _parse_game(year: int, bracket_id: str, round_number: int, game_node, task_id) -> dict | None:
     """Parse a tournament game from HTML node.
 
     Extracts information about a tournament game, including participating teams,
@@ -314,6 +313,7 @@ def _parse_game(
 
     Returns:
         Dictionary containing structured game data, or None if parsing fails.
+
     """
     try:
         game = {
@@ -380,7 +380,7 @@ def _parse_game(
         return None  # Return None on any parsing error within a game
 
 
-def _parse_team(team_node, task_id) -> Optional[dict]:
+def _parse_team(team_node, task_id) -> dict | None:
     """Parse team information from a tournament game HTML node.
 
     Extracts team details including seed, name, score, and win status.
@@ -392,6 +392,7 @@ def _parse_team(team_node, task_id) -> Optional[dict]:
 
     Returns:
         Dictionary containing structured team data, or None if parsing fails.
+
     """
     try:
         team = {
@@ -429,14 +430,12 @@ def _parse_team(team_node, task_id) -> Optional[dict]:
             return None
 
         # Convert seed/score to int if possible, otherwise keep as string
-        try:
+        import contextlib
+
+        with contextlib.suppress(ValueError, TypeError):
             team["seed"] = int(team["seed"]) if team["seed"] else None
-        except (ValueError, TypeError):
-            pass  # Keep as string if conversion fails or seed is None
-        try:
+        with contextlib.suppress(ValueError, TypeError):
             team["score"] = int(team["score"]) if team["score"] else None
-        except (ValueError, TypeError):
-            pass  # Keep as string if conversion fails or score is None
 
         return team
     except Exception as e:
