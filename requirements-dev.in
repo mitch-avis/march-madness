@@ -1,7 +1,10 @@
 black
-flake8
-isort
-pylint
 pytest
+pytest-clarity
 pytest-cov
 pytest-django
+pytest-randomly
+pytest-sugar
+pytest-timeout
+pytest-xdist
+ruff
