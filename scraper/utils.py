@@ -43,7 +43,6 @@ def get_end_day(year: int) -> int:
     of March) for the NCAA tournament. Specific years can be overridden via
     END_DATES.
     """
-
     override = END_DATES.get(year)
     if override is not None:
         return override
@@ -69,12 +68,13 @@ class DataScrapingError(Exception):
     """Exception raised when data scraping operations fail."""
 
     def __init__(self, message="Data scraping operation failed"):
+        """Initialize the error with a message."""
         self.message = message
         super().__init__(self.message)
 
 
 def create_session() -> requests.Session:
-    """Creates a requests session with retry logic."""
+    """Create a requests session with retry logic."""
     session = requests.Session()
     session.mount("https://", HTTP_ADAPTER)
     session.mount("http://", HTTP_ADAPTER)
@@ -96,6 +96,7 @@ def read_write_data(data_name: str, func, *args, **kwargs) -> pd.DataFrame:
 
     Returns:
         DataFrame containing the requested data
+
     """
     dataframe = pd.DataFrame()
     # Get dataframe from CSV if it exists
