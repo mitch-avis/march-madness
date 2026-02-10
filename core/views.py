@@ -20,6 +20,7 @@ def home(request):
 
     Returns:
         HttpResponse: Rendered home page template
+
     """
     return render(request, "index.html")
 
@@ -34,6 +35,7 @@ def health(_request):
 
     Returns:
         JsonResponse: Status information
+
     """
     logger.debug("Health check requested")
     return JsonResponse({"status": "ok", "version": "1.0.0"})
