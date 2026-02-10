@@ -9,7 +9,7 @@ from django.urls import path
 from scraper import views
 
 # Django naming convention - keep as is
-app_name = "scraper"  # pylint: disable=invalid-name
+app_name = "scraper"
 
 urlpatterns = [
     path("all/", views.scrape_all, name="scrape_all"),
