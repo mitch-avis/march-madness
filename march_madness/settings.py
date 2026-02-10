@@ -8,7 +8,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "mitch-secret-key"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "mitch-secret-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("true", "t", "1")
@@ -96,7 +96,6 @@ def get_current_season_year(now: datetime | None = None) -> int:
 
     The rollover month is configurable via SEASON_YEAR_ROLLOVER_MONTH.
     """
-
     now = now or datetime.now()
     rollover_month = int(os.getenv("SEASON_YEAR_ROLLOVER_MONTH", "7"))
     if not 1 <= rollover_month <= 12:
