@@ -40,7 +40,7 @@ def _parse_year_param(value: str, name: str) -> int:
 def _determine_year_range(
     request, path_start_year: int | None, path_end_year: int | None
 ) -> tuple[int, int]:
-    """Determines the effective start and end years from query or path parameters."""
+    """Determine the effective start and end years from query or path parameters."""
     current_year = settings.CURRENT_YEAR
     start_year_str = request.GET.get("start_year")
     end_year_str = request.GET.get("end_year")
@@ -66,7 +66,7 @@ def _determine_year_range(
 
 
 def _scrape_single_year(task: Task, year: int, total_operations: int, operations_done: int) -> int:
-    """Performs all scraping operations for a single year and updates progress."""
+    """Perform all scraping operations for a single year and update progress."""
     operations = [
         ("Stats", scrape_stats),
         ("Ratings", scrape_ratings),
