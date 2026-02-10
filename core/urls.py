@@ -9,7 +9,7 @@ from django.urls import path
 from . import views
 
 # Django naming convention - keep as is
-app_name = "core"  # pylint: disable=invalid-name
+app_name = "core"
 
 urlpatterns = [
     path("", views.home, name="home"),
