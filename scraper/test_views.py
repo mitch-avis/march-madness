@@ -14,22 +14,22 @@ from scraper.task_manager import TaskNotFoundError, TaskStatus, tasks
 
 
 class ScrapeAllViewTests(TestCase):
-    """Tests for the scrape_all view function"""
+    """Tests for the scrape_all view function."""
 
     def setUp(self):
-        """Set up test client and clear tasks registry"""
+        """Set up test client and clear tasks registry."""
         self.client = Client()
         tasks.clear()
 
     def tearDown(self):
-        """Clean up tasks registry after tests"""
+        """Clean up tasks registry after tests."""
         tasks.clear()
 
     @patch("scraper.views.run_task_in_thread")
     @patch("scraper.views.create_task")
     @patch("scraper.views.cleanup_old_tasks")
     def test_scrape_all_success_response(self, mock_cleanup, mock_create, mock_run):
-        """Test successful response from scrape_all view"""
+        """Test successful response from scrape_all view."""
         # Arrange
         mock_task = MagicMock()
         mock_task.id = "test-task-id"
@@ -55,7 +55,7 @@ class ScrapeAllViewTests(TestCase):
     @patch("scraper.views.run_task_in_thread")
     @patch("scraper.views.create_task")
     def test_scrape_all_with_custom_year(self, mock_create, _mock_run):
-        """Test scrape_all with a custom year parameter"""
+        """Test scrape_all with a custom year parameter."""
         # Arrange
         mock_task = MagicMock()
         mock_task.id = "test-task-id"
@@ -74,7 +74,7 @@ class ScrapeAllViewTests(TestCase):
         )
 
     def test_scrape_all_with_invalid_year(self):
-        """Test scrape_all with an invalid year parameter"""
+        """Test scrape_all with an invalid year parameter."""
         # Act
         response = self.client.get(reverse("scraper:scrape_all") + "?start_year=invalid")
 
@@ -86,7 +86,7 @@ class ScrapeAllViewTests(TestCase):
 
     @patch("scraper.views.create_task")
     def test_scrape_all_with_unexpected_error(self, mock_create):
-        """Test scrape_all with an unexpected error during processing"""
+        """Test scrape_all with an unexpected error during processing."""
         # Arrange
         mock_create.side_effect = Exception("Unexpected error")
 
@@ -101,21 +101,21 @@ class ScrapeAllViewTests(TestCase):
 
 
 class ScrapeStatsViewTests(TestCase):
-    """Tests for the scrape_stats_view function"""
+    """Tests for the scrape_stats_view function."""
 
     def setUp(self):
-        """Set up test client and clear tasks registry"""
+        """Set up test client and clear tasks registry."""
         self.client = Client()
         tasks.clear()
 
     def tearDown(self):
-        """Clean up tasks registry after tests"""
+        """Clean up tasks registry after tests."""
         tasks.clear()
 
     @patch("scraper.views.run_task_in_thread")
     @patch("scraper.views.create_task")
     def test_scrape_stats_view_success(self, mock_create, mock_run):
-        """Test successful response from scrape_stats_view"""
+        """Test successful response from scrape_stats_view."""
         # Arrange
         mock_task = MagicMock()
         mock_task.id = "stats-task-id"
@@ -140,7 +140,7 @@ class ScrapeStatsViewTests(TestCase):
     @patch("scraper.views.run_task_in_thread")
     @patch("scraper.views.create_task")
     def test_scrape_stats_view_custom_year(self, mock_create, _mock_run):
-        """Test scrape_stats_view with a custom year parameter"""
+        """Test scrape_stats_view with a custom year parameter."""
         # Arrange
         mock_task = MagicMock()
         mock_task.id = "stats-task-id"
@@ -159,7 +159,7 @@ class ScrapeStatsViewTests(TestCase):
         )
 
     def test_scrape_stats_view_invalid_year(self):
-        """Test scrape_stats_view with an invalid year parameter"""
+        """Test scrape_stats_view with an invalid year parameter."""
         # Act
         response = self.client.get(reverse("scraper:scrape_stats") + "?start_year=abc")
 
@@ -171,7 +171,7 @@ class ScrapeStatsViewTests(TestCase):
 
     @patch("scraper.views.create_task")
     def test_scrape_stats_view_unexpected_error(self, mock_create):
-        """Test scrape_stats_view with an unexpected error during processing"""
+        """Test scrape_stats_view with an unexpected error during processing."""
         # Arrange
         mock_create.side_effect = Exception("Unexpected error")
 
@@ -186,21 +186,21 @@ class ScrapeStatsViewTests(TestCase):
 
 
 class ScrapeRatingsViewTests(TestCase):
-    """Tests for the scrape_ratings_view function"""
+    """Tests for the scrape_ratings_view function."""
 
     def setUp(self):
-        """Set up test client and clear tasks registry"""
+        """Set up test client and clear tasks registry."""
         self.client = Client()
         tasks.clear()
 
     def tearDown(self):
-        """Clean up tasks registry after tests"""
+        """Clean up tasks registry after tests."""
         tasks.clear()
 
     @patch("scraper.views.run_task_in_thread")
     @patch("scraper.views.create_task")
     def test_scrape_ratings_view_success(self, mock_create, mock_run):
-        """Test successful response from scrape_ratings_view"""
+        """Test successful response from scrape_ratings_view."""
         # Arrange
         mock_task = MagicMock()
         mock_task.id = "ratings-task-id"
@@ -222,7 +222,7 @@ class ScrapeRatingsViewTests(TestCase):
         mock_run.assert_called_once()
 
     def test_scrape_ratings_view_invalid_year(self):
-        """Test scrape_ratings_view with an invalid year parameter"""
+        """Test scrape_ratings_view with an invalid year parameter."""
         # Act
         response = self.client.get(reverse("scraper:scrape_ratings") + "?start_year=invalid")
 
@@ -233,21 +233,21 @@ class ScrapeRatingsViewTests(TestCase):
 
 
 class ScrapeScoresViewTests(TestCase):
-    """Tests for the scrape_scores_view function"""
+    """Tests for the scrape_scores_view function."""
 
     def setUp(self):
-        """Set up test client and clear tasks registry"""
+        """Set up test client and clear tasks registry."""
         self.client = Client()
         tasks.clear()
 
     def tearDown(self):
-        """Clean up tasks registry after tests"""
+        """Clean up tasks registry after tests."""
         tasks.clear()
 
     @patch("scraper.views.run_task_in_thread")
     @patch("scraper.views.create_task")
     def test_scrape_scores_view_success(self, mock_create, _mock_run):
-        """Test successful response from scrape_scores_view"""
+        """Test successful response from scrape_scores_view."""
         # Arrange
         mock_task = MagicMock()
         mock_task.id = "scores-task-id"
@@ -269,7 +269,7 @@ class ScrapeScoresViewTests(TestCase):
 
     @patch("scraper.views.create_task")
     def test_scrape_scores_view_unexpected_error(self, mock_create):
-        """Test scrape_scores_view with an unexpected error during processing"""
+        """Test scrape_scores_view with an unexpected error during processing."""
         # Arrange
         mock_create.side_effect = Exception("Unexpected error")
 
@@ -283,20 +283,20 @@ class ScrapeScoresViewTests(TestCase):
 
 
 class TaskStatusViewTests(TestCase):
-    """Tests for the task_status view function"""
+    """Tests for the task_status view function."""
 
     def setUp(self):
-        """Set up test client and clear tasks registry"""
+        """Set up test client and clear tasks registry."""
         self.client = Client()
         tasks.clear()
 
     def tearDown(self):
-        """Clean up tasks registry after tests"""
+        """Clean up tasks registry after tests."""
         tasks.clear()
 
     @patch("scraper.views.get_task")
     def test_task_status_success(self, mock_get_task):
-        """Test successful response when retrieving task status"""
+        """Test successful response when retrieving task status."""
         # Arrange
         mock_task = MagicMock()
         mock_task.to_dict.return_value = {
@@ -320,7 +320,7 @@ class TaskStatusViewTests(TestCase):
 
     @patch("scraper.views.get_task")
     def test_task_status_not_found(self, mock_get_task):
-        """Test response when task is not found"""
+        """Test response when task is not found."""
         # Arrange
         mock_get_task.side_effect = TaskNotFoundError("Task not found")
 
@@ -335,7 +335,7 @@ class TaskStatusViewTests(TestCase):
 
     @patch("scraper.views.get_task")
     def test_task_status_unexpected_error(self, mock_get_task):
-        """Test response when unexpected error occurs"""
+        """Test response when unexpected error occurs."""
         # Arrange
         mock_get_task.side_effect = Exception("Unexpected error")
 
@@ -350,20 +350,20 @@ class TaskStatusViewTests(TestCase):
 
 
 class RecentTasksViewTests(TestCase):
-    """Tests for the recent_tasks view function"""
+    """Tests for the recent_tasks view function."""
 
     def setUp(self):
-        """Set up test client and clear tasks registry"""
+        """Set up test client and clear tasks registry."""
         self.client = Client()
         tasks.clear()
 
     def tearDown(self):
-        """Clean up tasks registry after tests"""
+        """Clean up tasks registry after tests."""
         tasks.clear()
 
     @patch("scraper.views.get_recent_tasks")
     def test_recent_tasks_success(self, mock_get_recent):
-        """Test successful response when retrieving recent tasks"""
+        """Test successful response when retrieving recent tasks."""
         # Arrange
         mock_tasks = [
             {"id": "task-1", "type": "scrape_all", "status": "success"},
@@ -385,7 +385,7 @@ class RecentTasksViewTests(TestCase):
 
     @patch("scraper.views.get_recent_tasks")
     def test_recent_tasks_unexpected_error(self, mock_get_recent):
-        """Test response when unexpected error occurs"""
+        """Test response when unexpected error occurs."""
         # Arrange
         mock_get_recent.side_effect = Exception("Unexpected error")
 
