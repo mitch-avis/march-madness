@@ -2,9 +2,9 @@
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from io import StringIO
-from typing import Callable, Optional
 
 import pandas as pd
 import requests
@@ -122,7 +122,7 @@ class ItemContext:
 
 
 def scrape_ratings(
-    start_year: int, end_year: int = CURRENT_YEAR, task_id: Optional[str] = None
+    start_year: int, end_year: int = CURRENT_YEAR, task_id: str | None = None
 ) -> None:
     """Scrape team ratings from given year to current year."""
     ratings_config = ScrapingItemConfig(
@@ -141,9 +141,7 @@ def scrape_ratings(
     )
 
 
-def scrape_stats(
-    start_year: int, end_year: int = CURRENT_YEAR, task_id: Optional[str] = None
-) -> None:
+def scrape_stats(start_year: int, end_year: int = CURRENT_YEAR, task_id: str | None = None) -> None:
     """Scrape team statistics from given year to current year."""
     stats_config = ScrapingItemConfig(
         scrape_type="Stats",
@@ -164,11 +162,10 @@ def scrape_stats(
 def _scrape_generic(
     start_year: int,
     end_year: int,
-    task_id: Optional[str],
+    task_id: str | None,
     item_config: ScrapingItemConfig,
 ) -> None:
-    # pylint: disable=too-many-locals, too-many-statements
-    """Generic scraping function for TeamRankings stats or ratings."""
+    """Scrape TeamRankings stats or ratings."""
     task = get_task(task_id) if task_id else None
     years_to_process = [y for y in range(start_year, end_year + 1) if y != 2020]
     total_years = len(years_to_process)
@@ -285,7 +282,7 @@ def _scrape_generic(
 
 
 def _create_session() -> requests.Session:
-    """Creates a requests session with retry logic."""
+    """Create a requests session with retry logic."""
     session = requests.Session()
     session.mount("https://", HTTP_ADAPTER)
     session.mount("http://", HTTP_ADAPTER)
@@ -296,8 +293,8 @@ def _process_single_year_ratings(
     session: requests.Session,
     year_ctx: YearContext,
     item_config: ScrapingItemConfig,
-    task: Optional[Task],
-    task_id: Optional[str],
+    task: Task | None,
+    task_id: str | None,
 ) -> bool:
     """Scrapes, processes, and saves all ratings for a single year."""
     return _process_single_year_generic(
@@ -313,8 +310,8 @@ def _process_single_year_stats(
     session: requests.Session,
     year_ctx: YearContext,
     item_config: ScrapingItemConfig,
-    task: Optional[Task],
-    task_id: Optional[str],
+    task: Task | None,
+    task_id: str | None,
 ) -> bool:
     """Scrapes, processes, and saves all stats for a single year."""
     return _process_single_year_generic(
@@ -327,12 +324,12 @@ def _process_single_year_stats(
 
 
 def _get_rating_url(rating_name: str, year: int, end_day: int) -> str:
-    """Constructs the URL for a specific rating."""
+    """Construct the URL for a specific rating."""
     return f"{TEAM_RANKINGS_URL_BASE}/ranking/{rating_name}-by-other?date={year}-03-{end_day}"
 
 
 def _get_stat_url(stat_name: str, year: int, end_day: int) -> str:
-    """Constructs the URL for a specific stat."""
+    """Construct the URL for a specific stat."""
     return f"{TEAM_RANKINGS_URL_BASE}/stat/{stat_name}?date={year}-03-{end_day}"
 
 
@@ -340,10 +337,10 @@ def _process_all_items_for_year(
     session: requests.Session,
     year_ctx: YearContext,
     item_config: ScrapingItemConfig,
-    task: Optional[Task],
-    task_id: Optional[str],
+    task: Task | None,
+    task_id: str | None,
 ) -> pd.DataFrame:
-    """Processes all items (stats/ratings) for a single year, returning a merged DataFrame."""
+    """Process all items for a single year and return a merged DataFrame."""
     all_items_for_year = pd.DataFrame()
     total_items = len(item_config.item_names)
     year = year_ctx.year
@@ -403,10 +400,10 @@ def _process_single_year_generic(
     session: requests.Session,
     year_ctx: YearContext,
     item_config: ScrapingItemConfig,
-    task: Optional[Task],
-    task_id: Optional[str],
+    task: Task | None,
+    task_id: str | None,
 ) -> bool:
-    """Generic function to scrape, process, and save all items (stats/ratings) for a single year."""
+    """Scrape, process, and save all items for a single year."""
     year = year_ctx.year
     scrape_type_lower = item_config.scrape_type.lower()
 
@@ -469,9 +466,9 @@ def _scrape_and_process_rating_item(
     item_name: str,
     year: int,
     url: str,
-    task_id: Optional[str],
-) -> Optional[pd.DataFrame]:
-    """Wrapper for _scrape_and_process_item specific to ratings."""
+    task_id: str | None,
+) -> pd.DataFrame | None:
+    """Wrap _scrape_and_process_item for ratings."""
     item_ctx = ItemContext(
         item_name=item_name, year=year, url=url, item_type="Rating", expected_col_name="Rating"
     )
@@ -487,9 +484,9 @@ def _scrape_and_process_stat_item(
     item_name: str,
     year: int,
     url: str,
-    task_id: Optional[str],
-) -> Optional[pd.DataFrame]:
-    """Wrapper for _scrape_and_process_item specific to stats."""
+    task_id: str | None,
+) -> pd.DataFrame | None:
+    """Wrap _scrape_and_process_item for stats."""
     item_ctx = ItemContext(
         item_name=item_name, year=year, url=url, item_type="Stat", expected_col_name=str(year - 1)
     )
@@ -503,8 +500,8 @@ def _scrape_and_process_stat_item(
 def _scrape_and_process_item(
     session: requests.Session,
     item_ctx: ItemContext,
-    task_id: Optional[str],
-) -> Optional[pd.DataFrame]:
+    task_id: str | None,
+) -> pd.DataFrame | None:
     """Scrapes and processes a single statistic or rating page for a given year."""
     item_name = item_ctx.item_name
     year = item_ctx.year
@@ -574,9 +571,9 @@ def _scrape_and_process_item(
 def _parse_and_clean_item_table(
     html_content: str,
     item_ctx: ItemContext,
-    task_id: Optional[str],
-) -> Optional[pd.DataFrame]:
-    """Parses HTML, extracts, validates, and cleans the relevant table."""
+    task_id: str | None,
+) -> pd.DataFrame | None:
+    """Parse HTML, extract data, and clean the relevant table."""
     item_name = item_ctx.item_name
     year = item_ctx.year
     item_type = item_ctx.item_type
