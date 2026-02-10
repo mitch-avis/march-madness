@@ -8,7 +8,6 @@ import secrets
 import threading
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +19,7 @@ class TaskError(Exception):
     """Base exception for task-related errors."""
 
     def __init__(self, message="Task operation failed"):
+        """Initialize the error with a message."""
         self.message = message
         super().__init__(self.message)
 
@@ -28,6 +28,7 @@ class TaskNotFoundError(TaskError):
     """Exception raised when a requested task is not found."""
 
     def __init__(self, message="Task not found"):
+        """Initialize the error with a message."""
         super().__init__(message)
 
 
@@ -41,15 +42,16 @@ class TaskStatus(Enum):
     CANCELLED = "cancelled"
 
 
-class Task:  # pylint: disable=too-many-instance-attributes
+class Task:
     """Represents a background task with status tracking."""
 
-    def __init__(self, task_type: str, params: Optional[Dict] = None):
+    def __init__(self, task_type: str, params: dict | None = None):
         """Initialize a new task.
 
         Args:
             task_type: Type of task (e.g., "scrape_stats")
             params: Parameters used for the task
+
         """
         self.id: str = str(secrets.token_urlsafe(6))
         self.task_type: str = task_type
@@ -57,7 +59,7 @@ class Task:  # pylint: disable=too-many-instance-attributes
         self.created_at: str = datetime.now().isoformat()
         self.started_at: str | None = None
         self.completed_at: str | None = None
-        self.params: Dict = params or {}
+        self.params: dict = params or {}
         self.error: str | None = None
         self.progress: int = 0
         self.cancelled: bool = False
@@ -77,6 +79,7 @@ class Task:  # pylint: disable=too-many-instance-attributes
         Args:
             success: Whether the task completed successfully
             error: Error message if task failed
+
         """
         if self.status != TaskStatus.CANCELLED:
             self.status = TaskStatus.SUCCESS if success else TaskStatus.FAILURE
@@ -93,6 +96,7 @@ class Task:  # pylint: disable=too-many-instance-attributes
 
         Args:
             progress: Progress percentage (0-100)
+
         """
         if self.status != TaskStatus.CANCELLED:
             self.progress = min(99, max(0, progress))  # Cap between 0-99 (100 is for completion)
@@ -111,11 +115,12 @@ class Task:  # pylint: disable=too-many-instance-attributes
                 "Attempted to cancel task %s but status was %s.", self.id, self.status.value
             )
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert task to dictionary representation.
 
         Returns:
             Dictionary with task properties
+
         """
         return {
             "id": self.id,
@@ -130,7 +135,7 @@ class Task:  # pylint: disable=too-many-instance-attributes
         }
 
 
-def create_task(task_type: str, params: Optional[Dict] = None) -> Task:
+def create_task(task_type: str, params: dict | None = None) -> Task:
     """Create and register a new task.
 
     Args:
@@ -139,6 +144,7 @@ def create_task(task_type: str, params: Optional[Dict] = None) -> Task:
 
     Returns:
         Newly created task
+
     """
     task = Task(task_type, params)
     tasks[task.id] = task
@@ -157,6 +163,7 @@ def get_task(task_id: str) -> Task:
 
     Raises:
         TaskNotFoundError: If the task ID is not found.
+
     """
     task = tasks.get(task_id)
     if not task:
@@ -170,7 +177,7 @@ class TaskCancelledError(Exception):
     """Raised when a task is cancelled during execution."""
 
 
-def get_recent_tasks(limit: int = 10) -> List[Dict]:
+def get_recent_tasks(limit: int = 10) -> list[dict]:
     """Get recent tasks, sorted by creation time.
 
     Args:
@@ -178,6 +185,7 @@ def get_recent_tasks(limit: int = 10) -> List[Dict]:
 
     Returns:
         List of task dictionaries
+
     """
     logger.debug("Retrieving recent tasks (limit: %d)", limit)
     sorted_tasks = sorted(tasks.values(), key=lambda t: t.created_at, reverse=True)
@@ -231,6 +239,7 @@ def run_task_in_thread(func, task: Task, *args, **kwargs):
         task: Task object to track status
         *args: Arguments to pass to the function
         **kwargs: Keyword arguments to pass to the function
+
     """
 
     def wrapped_func():
@@ -249,7 +258,7 @@ def run_task_in_thread(func, task: Task, *args, **kwargs):
                 )
         except TaskCancelledError as e:
             logger.info("Task %s execution cancelled by TaskCancelledError: %s", task.id, e)
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:
             logger.exception("Unhandled error during task %s execution.", task.id)
             if task.status != TaskStatus.CANCELLED:
                 task.complete(False, str(e))
