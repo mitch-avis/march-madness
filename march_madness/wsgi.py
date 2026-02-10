@@ -1,5 +1,4 @@
-"""
-WSGI config for march_madness project.
+"""WSGI config for march_madness project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
