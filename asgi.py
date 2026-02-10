@@ -1,5 +1,4 @@
-"""
-ASGI config for march_madness project.
+"""ASGI config for march_madness project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
