@@ -22,7 +22,7 @@ packaging==26.0
     #   pytest
 pathspec==1.0.4
     # via black
-platformdirs==4.6.0
+platformdirs==4.9.2
     # via black
 pluggy==1.6.0
     # via
@@ -48,7 +48,7 @@ pytest-clarity==1.0.1
     # via -r requirements-dev.in
 pytest-cov==7.0.0
     # via -r requirements-dev.in
-pytest-django==4.11.1
+pytest-django==4.12.0
     # via -r requirements-dev.in
 pytest-randomly==4.0.1
     # via -r requirements-dev.in
@@ -60,9 +60,9 @@ pytest-xdist==3.8.0
     # via -r requirements-dev.in
 pytokens==0.4.1
     # via black
-rich==14.3.2
+rich==14.3.3
     # via pytest-clarity
-ruff==0.15.0
+ruff==0.15.4
     # via -r requirements-dev.in
 termcolor==3.3.0
     # via pytest-sugar

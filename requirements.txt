@@ -6,13 +6,13 @@ asgiref==3.11.1
     #   django-cors-headers
 beautifulsoup4==4.14.3
     # via -r requirements.in
-certifi==2026.1.4
+certifi==2026.2.25
     # via requests
 charset-normalizer==3.4.4
     # via requests
 coloredlogs==15.0.1
     # via -r requirements.in
-django==6.0.2
+django==6.0.3
     # via
     #   -r requirements.in
     #   django-cors-headers
@@ -26,7 +26,7 @@ lxml==6.0.2
     # via -r requirements.in
 numpy==2.4.2
     # via pandas
-pandas==3.0.0
+pandas==3.0.1
     # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via pandas
