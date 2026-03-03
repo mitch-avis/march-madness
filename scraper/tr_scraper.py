@@ -512,25 +512,61 @@ def _scrape_and_process_item(
     logger.debug(
         "Task %s: Requesting %s '%s' for %d from URL: %s", task_id, item_type, item_name, year, url
     )
+    max_403_retries = 5
     attempt = 0
     sleep_minutes = 5  # Sleep time in minutes for retrying after a 403 error
-    # Loop indefinitely until a successful response or a non-403 error occurs
     while True:
+        # Check for task cancellation before each attempt
+        if task_id:
+            try:
+                task_obj = get_task(task_id)
+                if task_obj and task_obj.cancelled:
+                    logger.info(
+                        "Task %s: Cancelled during %s '%s' request for year %d.",
+                        task_id,
+                        item_type_lower,
+                        item_name,
+                        year,
+                    )
+                    raise TaskCancelledError(
+                        f"Task {task_id} cancelled during {item_type_lower} request."
+                    )
+            except TaskCancelledError:
+                raise
+            except Exception as e:
+                logger.debug(
+                    "Task %s: Error checking task cancellation: %s. Continuing with request.",
+                    task_id,
+                    e,
+                )
+
         try:
             response = session.get(url, timeout=REQUEST_TIMEOUT)
-            response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+            response.raise_for_status()
             break  # Exit loop on successful response
         except requests.RequestException as e:
             if hasattr(e, "response") and e.response is not None and e.response.status_code == 403:
                 attempt += 1
+                if attempt > max_403_retries:
+                    logger.error(
+                        "Task %s: Exceeded %d retries for 403 Forbidden on %s '%s' for year %d. "
+                        "Giving up.",
+                        task_id,
+                        max_403_retries,
+                        item_type,
+                        item_name,
+                        year,
+                    )
+                    return None
                 logger.warning(
-                    "Task %s: Received 403 Forbidden for %s '%s' for year %d (attempt %d). "
+                    "Task %s: Received 403 Forbidden for %s '%s' for year %d (attempt %d/%d). "
                     "Sleeping for %d minutes before retrying.",
                     task_id,
                     item_type,
                     item_name,
                     year,
                     attempt,
+                    max_403_retries,
                     sleep_minutes,
                 )
                 time.sleep(sleep_minutes * 60)
